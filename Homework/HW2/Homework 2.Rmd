@@ -8,11 +8,63 @@ output:
     toc_float: TRUE
 ---
 
+\documentclass{article}
+\begin{document}
+
+
 # Question 6
+## a.) 
+```{r, echo = FALSE}
+library(xtable)
+options(xtable.floating = FALSE)
+options(xtable.timestamp = "")
+```
+
 ```{r}
 mela <- read.table("melanoma.txt", header = TRUE)
-mela
-
+#xtable(head(mela))
 glm.mela <- glm(totalincidence ~ years + sunspotnumber, data = mela, family = poisson())
+xtable(summary(glm.mela)) 
 summary(glm.mela)
+```
+## b.) 
+```{r,echo = FALSE}
+anova(glm.mela, test = "Chisq")
+```
+We can see from the $\chi^2$ test that the number of sun spots is not significant at any reasonable $\alpha$, however the year the melanoma have been diagnosed is highly significant. 
+
+## c.) 
+We test the following hypothesis for $i = 1,2,3$:
+$$
+H_0: \beta_i = 0 \\
+H_a: \beta_i > 0
+$$
+
+```{r}
+# Intercept
+pnorm(-12.643, lower.tail = FALSE)
+
+# Years
+pnorm(13.201, lower.tail = FALSE)
+
+# Sunspot number
+pnorm(0.957, lower.tail = FALSE)
+
+```
+
+We can see for both the intercept and the years, that we reject our null hypothesis, concluding that we have significant evidence that the number of melanoma increases over the calendar years. However, we do not have evidence to conclude that the number of sunspots increases with the number of melanomas. 
+
+# Question 7
+```{r}
+# Find the variance covariance matrix
+mela.vmat <- vcov(glm.mela)
+
+# Find the eigen values 
+mela.evals <- eigen(mela.vmat)$values
+
+# get the eigenvalues corresponding to the variables (no intercept)
+mela.evals <- mela.evals[2:3]
+
+library(ellipse)
+plot(ellipse(glm.mela, which = c(2,3)))
 ```
