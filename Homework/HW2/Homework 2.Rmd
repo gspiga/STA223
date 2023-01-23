@@ -1,0 +1,18 @@
+---
+title: "Homework 2"
+author: "Gianni Spiga"
+date: '2023-01-23'
+output: 
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+---
+
+# Question 6
+```{r}
+mela <- read.table("melanoma.txt", header = TRUE)
+mela
+
+glm.mela <- glm(totalincidence ~ years + sunspotnumber, data = mela, family = poisson())
+summary(glm.mela)
+```
