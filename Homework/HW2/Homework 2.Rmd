@@ -1,16 +1,18 @@
 ---
 title: "Homework 2"
 author: "Gianni Spiga"
-date: '2023-01-23'
-output: 
+date: "2023-01-23"
+output:
+  pdf_document:
+    toc: yes
   html_document:
-    toc: TRUE
-    toc_float: TRUE
+    toc: yes
+    toc_float: yes
 ---
 
-
-# Question 6
-## a.) 
+# Problem Set 1
+## Question 6
+### a.) 
 ```{r, echo = FALSE}
 library(xtable)
 library(knitr)
@@ -27,13 +29,16 @@ sum.mela <- summary(glm.mela)
 kable(sum.mela$coefficients)
 #kable(summary(glm.mela))
 ```
-## b.) 
+
+We can see that the predictors have an effect on the response since we see non-zero values for the estimates. 
+
+### b.) 
 ```{r,echo = FALSE}
 kable(anova(glm.mela, test = "Chisq"))
 ```
 We can see from the $\chi^2$ test that the number of sun spots is not significant at any reasonable $\alpha$, however the year the melanoma have been diagnosed is highly significant. 
 
-## c.) 
+### c.) 
 We test the following hypothesis for $i = 1,2,3$:
 $$
 H_0: \beta_i = 0 \\
@@ -42,20 +47,20 @@ $$
 
 ```{r,echo = FALSE}
 # Intercept
-pnorm(-12.643, lower.tail = FALSE)
+cat("The p-value for the intercept is", pnorm(-12.643, lower.tail = FALSE), "\n")
 
 # Years
-pnorm(13.201, lower.tail = FALSE)
+cat("The p-value for Years is", pnorm(13.201, lower.tail = FALSE), "\n")
 
 # Sunspot number
-pnorm(0.957, lower.tail = FALSE)
+cat("The p-value for the Number of Sunspots is",pnorm(0.957, lower.tail = FALSE))
 
 ```
 
 We can see for both the intercept and the years, that we reject our null hypothesis, concluding that we have significant evidence that the number of melanoma increases over the calendar years. However, we do not have evidence to conclude that the number of sunspots increases with the number of melanomas. 
 
-# Question 7
-```{r,echo = FALSE}
+## Question 7
+```{r,echo = FALSE, message = F}
 # Find the variance covariance matrix
 mela.vmat <- vcov(glm.mela)
 
@@ -84,7 +89,7 @@ points(x = c(0), y = c(0), cex = 2, pch = 6, col = "blue")}
 
 However, the point of interest is not within graphing visibility of our ellipsoid. Since we are already at such a small level of $\alpha$, we can conclude that the p-value is very close to 0, leading us to reject this null hypothesis at any reasonable significance level. 
 
-# 8.)
+## Question 8
 $$
 H_0: \beta_1 \leq \beta_2 \\
 H_a: \beta_1 > \beta_2 
@@ -102,7 +107,7 @@ Since we can see that our observed $\hat{\beta_1} > \hat{\beta_2}$ is below the 
 
 ```{r, echo = FALSE}
 info <- vcov(glm.mela)[2:3, 2:3]
-info
+kable(info)
 
 betahat <- c(glm.mela$coefficients[2], glm.mela$coefficients[3])
 
@@ -111,25 +116,31 @@ betahat <- c(glm.mela$coefficients[2], glm.mela$coefficients[3])
 chi.stat <- (betahat - c(1,-1)) %*% info %*% (betahat - c(1,-1))
 
 # We print the p-value for the one sided test
-pchisq(chi.stat, df = 2, lower.tail = TRUE) / 2
+kable(pchisq(chi.stat, df = 2, lower.tail = TRUE) / 2)
 ```
 
 We solve for a p-value of $0.0000023$, leading us to reject the null and conclude we have statistically sufficient evidence that $\beta_1 > \beta_2$. 
 
-# Question 9
+## Question 9
 
-## a.)
+### a.)
 One example of a consistent estimator for $\hat{m}(x)$ is the Kernel density estimator. In the paper, "Consistency of the kernel density estimator - a survey", Weid and Weißbach prove that the Kernel Density Estimator is is almost sure convergent, which is stronger than convergence in probability, the requirement for consistency of an estimator. 
 
-## b.) 
+### b.) 
 We can use the quotient type parameter for smoothing. The bias and variance depend since by definition of consistency, we expect as n approached infinity, the variance will approach zero. Because of this, we must keep in mind the trade off there is with the variance and bias when choosing. 
 
-## c.) 
+### c.) 
 
+### d.) 
+The function $v(x)$ would also be consistent since it is a combination of the $E(Y|X = x)$ and $E(Y^2|X = x)$, which is also a consistent estimator by the continuous mapping theorem. 
 
-# Question 13
-## a.) 
-```{r, echo = FALSE}
+## Question 13
+
+### a.) 
+
+Below we can see 5 graphs, the first one is our data with no fitting, the second and third are with over smoothing and the final two are with under smoothing for the data. 
+
+```{r, echo = FALSE, message = F}
 zmk <- read.table("zmk.txt", header = FALSE)
 names(zmk) <- c("Voltage", "Force")
 
@@ -141,25 +152,25 @@ fit2over <- locfit(Force ~ lp(Voltage, nn = 0.05), data = zmk)
 #summary(fit1)
 
 
-plot(fit1over,col = "red", main = "Oversmoothing with Smoothing Parameter = 0.1")
+plot(fit1over, col = "red", main = "Oversmoothing with Smoothing Parameter = 0.1")
 points(zmk$Voltage, zmk$Force)
-plot(fit2over,col = "red", main = "Oversmoothing with Smoothing Parameter = 0.05")
+plot(fit2over, col = "red", main = "Oversmoothing with Smoothing Parameter = 0.05")
 points(zmk$Voltage, zmk$Force)
 
 
-# Now we plot with underfitting 
+# Now we plot with underfitting
 fit1under <- locfit(Force ~ lp(Voltage, nn = 1), data = zmk)
 fit2under <- locfit(Force ~ lp(Voltage, nn = 20), data = zmk)
 #summary(fit1)
 
 
-plot(fit1under,col = "red", main = "Undersmoothing with Smoothing Parameter = 2")
+plot(fit1under, col = "red", main = "Undersmoothing with Smoothing Parameter = 2")
 points(zmk$Voltage, zmk$Force)
-plot(fit2under,col = "red", main = "Undersmoothing with Smoothing Parameter = 20")
+plot(fit2under, col = "red", main = "Undersmoothing with Smoothing Parameter = 20")
 points(zmk$Voltage, zmk$Force)
 ```
 
-## b.)
+### b.)
 
 ```{r,echo = FALSE}
 fit.good <- locfit(Force ~ lp(Voltage, nn = 0.8), data = zmk)
@@ -167,5 +178,63 @@ plot(fit.good, col = "red")
 points(zmk$Voltage, zmk$Force)
 ```
 
-## c.) 
+### c.) 
 The strategy for finding a good fit is to visualzie the smoothing fits over the points and find the curve that accurately fits the data without fitting too many indivudal points and still showing visual changes in directions of the data. 
+
+## Question 19
+See handwritten portion
+
+# Problem Set 2 
+## Questions 1-3 
+
+See handwritten portion
+
+## Question 6
+### a.)
+For the $k$-th derivative, we can use the estimator $k!\hat{\beta_k}$. This would be an estimator that would be simple to write and relatively easy to compute for reasonable values of $k$. If one were to look for a large $k$-th derivative however, they could run into potential computational slow down due to the high growth rate of the factorial function. 
+
+### b.) 
+There is multiple methods of choosing the bandwidth. One example is the leave-one-out cross validation, however this can get computationally expensive as $n$ grows large, so a slightly better option would be to do m-fold cross validation. Any value of $m$ less than $n-1$ would be computationally faster. If we did not want to use so much computational power, and were not interested in finding the most optimal value, we could perform subjective choosing as well. 
+
+### c.)
+```{r, echo = FALSE, message = F}
+library(KernSmooth)
+###  This is not fitting 
+# fitpolyMean <-
+#   locpoly(x = zmk$Voltage, y = zmk$Force, bandwidth = 0.9,gridsize = 1000, drv = 0)
+# fitpolyDeriv <-
+#   locpoly(x = zmk$Voltage, y = zmk$Force, bandwidth = 75, gridsize = 500, drv = 1)
+# #plot(fit1poly, type = "l")
+# 
+# with(zmk, {
+#   plot(
+#     Voltage,
+#     Force,
+#     ylim = range(fitpolyDeriv),
+#     pch = 16,
+#     cex = 0.6
+#   )
+#   lines(fitpolyMean$x, fitpolyMean$y, col = 'green')
+#   lines(fitpolyDeriv$x, fitpolyDeriv$y, col = 'red')
+# })
+
+
+
+# Trying cleaner code with no gridsize adjustment 
+mean = locpoly(zmk$Voltage, zmk$Force, bandwidth = 2.18, drv = 0)
+deriv = locpoly(zmk$Voltage, zmk$Force, bandwidth = 5.7, drv = 1)
+with(zmk, {
+  plot(Voltage,
+       Force,
+       #ylim = range(deriv),
+       pch = 16,
+       cex = 0.6)
+  lines(mean$x, mean$y, col = 'green')
+  lines(deriv$x, deriv$y, col = 'red')
+})
+```
+ We can see here that the locpoly() function is overfitting, however, the bandwidth is at the minimum it can be set before creating NaNs, suggesting that polynomial fitting is not the best choice for this data. 
+ 
+ # Appendix 
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+```
