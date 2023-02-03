@@ -153,9 +153,75 @@ We can see that all of our predictors in the Poisson model are highly significan
 We will next check the goodness-of-fit comparing Deviance and Pearson residuals. From the boxplot above, we can see that our Pearson and Deviance Residuals are very similar, indicating that our model is a good fit. From the Runs Test, we can see that there is no indication of a non-random pattern, causing us to fail to reject the null hypothesis that the sequence of residuals was produced in a random manner. 
 
 ## Question 9
+
+### a.)
+
 ```{r, echo = FALSE}
 lung <- read.table("lung.dat", header = T)
 lung
 
+lung.fit <- glm(cbind(Yes, No) ~ Dust + as.factor(Race) + as.factor(Sex) + as.factor(Smoker) + EmpLength, data = lung, family = "binomial")
 
+lung.step <- stepAIC(lung.fit, trace = F)
+lung.step.fit <- glm(cbind(Yes, No) ~ Dust + as.factor(Smoker) + EmpLength, data = lung, family = "binomial")
+kable(lung.step$anova)
+
+kable(anova(lung.fit, test = "Chi"))
 ```
+
+When we perform a stepwise logistic regression with the AIC, we get a best model including Dustiness, Smoker Status, and Employment length. When we find the best model via a deviance table, we get a model that includes all the same variables as before as well as the Sex of the worker. Let's observe the residuals of the smaller model. 
+
+```{r, echo = F}
+lung.resid.P <- residuals(lung.step.fit, type = "pearson")
+lung.resid.D <- residuals(lung.step.fit, type = "deviance")
+
+ggplot() + geom_boxplot(aes(x = "Pearson", y = lung.resid.P)) + geom_boxplot(aes(x = "Deviance", y = lung.resid.D)) + labs(y = "Values")
+```
+
+We will pick the smaller model as our fit, since the deviance table is inconsistent since it depends on the order of variables, as well as the p-value for the additional variable is the highest. 
+
+### b.) 
+
+```{r, echo =FALSE}
+#summary(lung.step.fit)
+```
+
+We would be curious in if if being a non-smoker status decreases chance of illness, so we would be interested in finding out if this rate was strictly greater than 0. We would test:
+
+$$
+H_0: \beta_{smoker} \geq 0\\
+H_a: \beta_{smoker} < 0
+$$
+We can calculate this p-value by dividing the two tailed p-value by two, giving us a p-value of $0.000164$, leading us to reject $H_0$. 
+
+### c.) 
+
+```{r, echo = F}
+# Find leverage points
+lung.lev <- hatvalues(lung.step.fit)
+
+lung.cook <- cooks.distance(lung.step.fit)
+
+plot(lung.step.fit, which = c(4, 5))
+```
+
+From our first plot, we can see that that observation 49 has the highest Cooks distance, indicating that it is an influential outlier. We can also see more clearly from our second plot that observation is another high leverage outlier. 
+
+### d.) 
+
+```{r, echo = F}
+lung.int <-
+  glm(
+    cbind(Yes, No) ~ (Dust * as.factor(Smoker) * EmpLength) * (Dust * as.factor(Smoker) * EmpLength),
+    data = lung,
+    family = "binomial"
+  )
+kable(summary(lung.int)$coefficients)
+```
+
+$$
+H_0: A\beta = 0; A \in R^{5x6}, \beta \in R^6 \\ 
+H_a: A\beta = 0; A \in R^{5x6}, \beta \in R^6 \\ 
+$$
+
+The degrees of freedom in this example would be 5. Based on the summary table, we should not have any interactions in this model, as none of them are significant. With this model, our smoker variable (main effect, not interaction), is also not significant. 
