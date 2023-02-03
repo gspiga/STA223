@@ -1,0 +1,161 @@
+---
+title: "Homework 3"
+author: "Gianni Spiga"
+date: '2023-01-30'
+output: html_document
+---
+
+# Problem Set 2 
+
+## Question 4
+
+### a.) Repeat the Poisson regression fit for the Melanoma data and obtain Pearson and deviance residuals.
+
+Below is the Poisson model for our melanoma data, as well as the first 5 residual values for both Pearson and Deviance residuals. 
+
+```{r, echo = FALSE}
+library(knitr)
+
+mela <- read.table("melanoma.txt", header = TRUE)
+
+glm.mela <-
+  glm(totalincidence ~ years + sunspotnumber,
+      data = mela,
+      family = poisson())
+sum.mela <- summary(glm.mela)
+#print(xtable(summary(glm.mela)), type = "latex", comment= FALSE)
+kable(sum.mela$coefficients)
+#kable(summary(glm.mela))
+
+residPear <- residuals(glm.mela, type = "pearson")
+residDev <- residuals(glm.mela, type = "deviance")
+
+residData <- data.frame(residPear, residDev)
+names(residData) <- c("Pearson", "Deviance")
+kable(head(residData, 5))
+```
+
+### b.) 
+
+We first print the summary statistics for both residuals. We can see that they are quite similar in measures of summary statistics.
+
+```{r, echo = FALSE}
+kable(summary(residData))
+
+# Boxplots of both residual types
+boxplot(residData)
+
+# Residuals vs fitted values
+plot(
+  glm.mela$fitted.values,
+  residData[, 1],
+  main = "Pearson Residuals vs Fitted Values",
+  xlab = "Fitted Values",
+  ylab = "Pearson Residuals"
+)
+
+plot(
+  glm.mela$fitted.values,
+  residData[, 2],
+  main = "Deviance Residual vs Fitted Values",
+  xlab = "Fitted Values",
+  ylab = "Deviance Residuals"
+)
+```
+
+Based on the plots, we can see that the deviance and pearson residuals are very similar to each other, thus indicating that our model is a good fit. 
+
+### c.) 
+There is no indication of a lack of fit in the reisdual plots.
+
+### d.)
+```{r, echo = FALSE}
+# Deviance table
+kable(anova(glm.mela, test = "Chisq"))
+```
+
+### e.)
+
+```{r, echo = FALSE}
+library(MASS)
+scope <- list(upper = ~years + sunspotnumber, lower = ~1)
+mela.step <- stepAIC(glm.mela, trace = TRUE, scope = scope)
+```
+
+### f.)
+
+Based off the stepwise regression, we would pick the model with the only predictor being years, since it has the lowest AIC. We can conclude that the best way to model the incidence of melanomas is to track the year it was acquired for each patient.
+
+# Problem Set 3 
+
+## Question 7
+
+```{r, echo = FALSE}
+chemo <- read.table("chemo.dat")
+names(chemo) <-
+  c(
+    "ID",
+    "1st.Period",
+    "2nd.Period",
+    "3rd.Period",
+    "4th.Period",
+    "Treatment",
+    "Baseline",
+    "Patient.Age"
+  )
+chemo["Seiz.Count"] <- chemo[, 2] + chemo[, 3] + chemo[, 4] + chemo[, 5]
+
+chemo <- chemo[, -c(1:5)]
+# Preview our cleaned dataset
+kable(head(chemo))
+```
+
+Above we can see a small preview of the cleaned data set. Before we begin analysis, we will check if the data has any outliers. 
+
+```{r, echo = F}
+library(ggplot2)
+library(plotly)
+
+# Scatter of Treatment vs Seiz.Count
+ggplot(data = chemo, aes(x = Seiz.Count, y = Treatment)) + geom_point()
+
+# One point with a total amount of seizures over 300
+kable(chemo[which(chemo["Seiz.Count"] >= 300),])
+
+# Remove the outlier
+chemo.out <- which(chemo["Seiz.Count"] >= 300)
+chemo <- chemo[-49, ]
+```
+
+We can see that subject 49 has an abnormally high amount of seizures, so we will remove this observation from the data and begin analysis with our Poisson Regression model.
+
+```{r, echo = F}
+chemo.fit <- glm(Seiz.Count ~ as.factor(Treatment) + Baseline + Patient.Age, data = chemo, family = poisson())
+chemo.fit.sum <- summary(chemo.fit)
+kable(chemo.fit.sum$coefficients)
+
+# Check residuals
+chemo.res.P <- residuals(chemo.fit, type = "pearson")
+chemo.res.D <- residuals(chemo.fit, type = "deviance")
+
+ggplot() + geom_boxplot(aes(x = "Pearson", y = chemo.res.P)) + geom_boxplot(aes(x = "Deviance", y = chemo.res.D)) + labs(y = "Values")
+
+# Runs test
+library(lawstat)
+runs.test(y = chemo.res.P, plot.it = TRUE)
+title(main='Pearson Residual Runs Test')
+runs.test(y = chemo.res.D, plot.it = TRUE)
+title(main='Deviance Residual Runs Test')
+```
+
+We can see that all of our predictors in the Poisson model are highly significan, meaning that with a null hypothesis of $\beta_i = 0$, we would reject. We can see from the coefficients that Baseline and Patient Age increase the log expected count of total seizures while the treatment type decreases the log expected count of seizures.
+
+We will next check the goodness-of-fit comparing Deviance and Pearson residuals. From the boxplot above, we can see that our Pearson and Deviance Residuals are very similar, indicating that our model is a good fit. From the Runs Test, we can see that there is no indication of a non-random pattern, causing us to fail to reject the null hypothesis that the sequence of residuals was produced in a random manner. 
+
+## Question 9
+```{r, echo = FALSE}
+lung <- read.table("lung.dat", header = T)
+lung
+
+
+```
