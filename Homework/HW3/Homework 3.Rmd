@@ -1,8 +1,11 @@
 ---
 title: "Homework 3"
 author: "Gianni Spiga"
-date: '2023-01-30'
-output: html_document
+date: "2023-01-30"
+output:
+  pdf_document: 
+    toc: true
+  
 ---
 
 # Problem Set 2 
@@ -23,9 +26,7 @@ glm.mela <-
       data = mela,
       family = poisson())
 sum.mela <- summary(glm.mela)
-#print(xtable(summary(glm.mela)), type = "latex", comment= FALSE)
 kable(sum.mela$coefficients)
-#kable(summary(glm.mela))
 
 residPear <- residuals(glm.mela, type = "pearson")
 residDev <- residuals(glm.mela, type = "deviance")
@@ -39,7 +40,7 @@ kable(head(residData, 5))
 
 We first print the summary statistics for both residuals. We can see that they are quite similar in measures of summary statistics.
 
-```{r, echo = FALSE}
+```{r, echo = F, out.width="50%"}
 kable(summary(residData))
 
 # Boxplots of both residual types
@@ -86,7 +87,15 @@ mela.step <- stepAIC(glm.mela, trace = TRUE, scope = scope)
 
 Based off the stepwise regression, we would pick the model with the only predictor being years, since it has the lowest AIC. We can conclude that the best way to model the incidence of melanomas is to track the year it was acquired for each patient.
 
+## Question 5
+
+See written work
+
 # Problem Set 3 
+
+## Question 1, 3, 4
+
+See written work
 
 ## Question 7
 
@@ -112,7 +121,7 @@ kable(head(chemo))
 
 Above we can see a small preview of the cleaned data set. Before we begin analysis, we will check if the data has any outliers. 
 
-```{r, echo = F}
+```{r, echo = F, out.width="65%"}
 library(ggplot2)
 library(plotly)
 
@@ -129,8 +138,13 @@ chemo <- chemo[-49, ]
 
 We can see that subject 49 has an abnormally high amount of seizures, so we will remove this observation from the data and begin analysis with our Poisson Regression model.
 
-```{r, echo = F}
-chemo.fit <- glm(Seiz.Count ~ as.factor(Treatment) + Baseline + Patient.Age, data = chemo, family = poisson())
+```{r, echo = F, out.width="65%"}
+chemo.fit <-
+  glm(
+    Seiz.Count ~ as.factor(Treatment) + Baseline + Patient.Age,
+    data = chemo,
+    family = poisson()
+  )
 chemo.fit.sum <- summary(chemo.fit)
 kable(chemo.fit.sum$coefficients)
 
@@ -143,9 +157,9 @@ ggplot() + geom_boxplot(aes(x = "Pearson", y = chemo.res.P)) + geom_boxplot(aes(
 # Runs test
 library(lawstat)
 runs.test(y = chemo.res.P, plot.it = TRUE)
-title(main='Pearson Residual Runs Test')
+title(main = 'Pearson Residual Runs Test')
 runs.test(y = chemo.res.D, plot.it = TRUE)
-title(main='Deviance Residual Runs Test')
+title(main = 'Deviance Residual Runs Test')
 ```
 
 We can see that all of our predictors in the Poisson model are highly significan, meaning that with a null hypothesis of $\beta_i = 0$, we would reject. We can see from the coefficients that Baseline and Patient Age increase the log expected count of total seizures while the treatment type decreases the log expected count of seizures.
@@ -158,12 +172,21 @@ We will next check the goodness-of-fit comparing Deviance and Pearson residuals.
 
 ```{r, echo = FALSE}
 lung <- read.table("lung.dat", header = T)
-lung
 
-lung.fit <- glm(cbind(Yes, No) ~ Dust + as.factor(Race) + as.factor(Sex) + as.factor(Smoker) + EmpLength, data = lung, family = "binomial")
+lung.fit <-
+  glm(
+    cbind(Yes, No) ~ Dust + as.factor(Race) + as.factor(Sex) + as.factor(Smoker) + EmpLength,
+    data = lung,
+    family = "binomial"
+  )
 
 lung.step <- stepAIC(lung.fit, trace = F)
-lung.step.fit <- glm(cbind(Yes, No) ~ Dust + as.factor(Smoker) + EmpLength, data = lung, family = "binomial")
+lung.step.fit <-
+  glm(
+    cbind(Yes, No) ~ Dust + as.factor(Smoker) + EmpLength,
+    data = lung,
+    family = "binomial"
+  )
 kable(lung.step$anova)
 
 kable(anova(lung.fit, test = "Chi"))
@@ -171,7 +194,7 @@ kable(anova(lung.fit, test = "Chi"))
 
 When we perform a stepwise logistic regression with the AIC, we get a best model including Dustiness, Smoker Status, and Employment length. When we find the best model via a deviance table, we get a model that includes all the same variables as before as well as the Sex of the worker. Let's observe the residuals of the smaller model. 
 
-```{r, echo = F}
+```{r, echo = F, out.width="65%"}
 lung.resid.P <- residuals(lung.step.fit, type = "pearson")
 lung.resid.D <- residuals(lung.step.fit, type = "deviance")
 
@@ -196,12 +219,10 @@ We can calculate this p-value by dividing the two tailed p-value by two, giving 
 
 ### c.) 
 
-```{r, echo = F}
+```{r, echo = F, out.width="50%"}
 # Find leverage points
 lung.lev <- hatvalues(lung.step.fit)
-
 lung.cook <- cooks.distance(lung.step.fit)
-
 plot(lung.step.fit, which = c(4, 5))
 ```
 
@@ -224,4 +245,15 @@ H_0: A\beta = 0; A \in R^{5x6}, \beta \in R^6 \\
 H_a: A\beta = 0; A \in R^{5x6}, \beta \in R^6 \\ 
 $$
 
-The degrees of freedom in this example would be 5. Based on the summary table, we should not have any interactions in this model, as none of them are significant. With this model, our smoker variable (main effect, not interaction), is also not significant. 
+The degrees of freedom in this example would be 5. Based on the summary table, we should not have any interactions in this model, as none of them are significant. With this model, our smoker variable (main effect, not interaction), is also not significant.
+
+# Provided Question 3
+
+See written work.
+
+# Appendix
+
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+```
+
+# Written Work 
