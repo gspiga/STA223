@@ -1,0 +1,10 @@
+---
+title: "Homework 4"
+author: "Gianni Spiga"
+date: "2023-02-05"
+output: html_document
+---
+
+# Problem Set 3 
+
+## Question 8
