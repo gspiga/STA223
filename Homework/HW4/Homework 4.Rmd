@@ -8,3 +8,34 @@ output: html_document
 # Problem Set 3 
 
 ## Question 8
+
+### a.)
+
+```{r, echo = F}
+library(knitr)
+pima <- read.table("pima-indians-diabetes.dat", sep = ",")
+
+names(pima) <- c("Unknown", "PGC", "DBP", "Tricep", "Serum.Insulin", "BMI", "Unknown", "Age", "Diabetic")
+# Description of data on page 146
+pima <- pima[,-c(1, 7)]
+
+# Carry out fit with binomial regression 
+pima.fit <- glm(Diabetic ~ ., data = pima, family = "binomial")
+#summary(pima.fit)
+
+# To test the overall regression effect, we use LRT (pg 44)
+pima.fit.null <- glm(Diabetic ~ 1, data = pima, family = "binomial")
+
+#LRT
+pima.lrt <- anova(pima.fit.null, pima.fit, test = "Chi")
+kable(pima.lrt)
+pima.lrt$`Pr(>Chi)`
+```
+
+We first build a full model and null model, and then perform a likelihood ratio test. Performing said test gives us an extremely small p-value as shown above, thus leading us to reject $H_0$ and conclude that there is an overall regression effect. Because of this, we can continue to develop a meaningful regression analysis. 
+
+### b.)
+
+```{r, echo = F}
+
+```
