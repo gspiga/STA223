@@ -1,8 +1,10 @@
 ---
 title: "Homework 4"
 author: "Gianni Spiga"
-date: "2023-02-05"
-output: html_document
+date: '2023-02-05'
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 # Problem Set 3 
@@ -36,6 +38,32 @@ We first build a full model and null model, and then perform a likelihood ratio 
 
 ### b.)
 
+```{r}
+library(MASS)
+# We first fit with the AIC 
+pima.AIC <- stepAIC(pima.fit, trace = F)
+pima.BIC <- stepAIC(pima.fit, trace = F, k = log(nrow(pima)))
+kable(pima.AIC$coefficients)
+kable(pima.BIC$coefficients)
+```
+The first set of coefficients is one that was picked by AIC and the second set of coefficients is those picked by the BIC criterion. We can see that the AIC coefficients contains all the coefficients from BIC with the addition of Diatolic Blood Pressure. 
+
+### c.) 
+
+We will continue with the model chosen by the BIC criterion, in effort to keep our model as simple and understandable as possible. Let's create a fit for this new model. 
+
+```{r, echo = F}
+pima.fit.red <- glm(Diabetic ~ PGC + BMI + Age, data = pima, family = "binomial")
+kable(summary(pima.fit.red)$coefficients)
+```
+
+From the table above, we can see that all of the coefficients in this model are significant at any reasonable choice of $\alpha$. Thus we can conclude categorizing whether a Pima Indian is diabetic or not is predicted by their PGC, Body Mass Index, and Age. 
+
 ```{r, echo = F}
 
+```
+
+# Appendix 
+
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
 ```
