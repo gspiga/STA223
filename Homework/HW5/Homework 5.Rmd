@@ -1,0 +1,216 @@
+---
+title: "Homework 5"
+author: "Gianni Spiga"
+date: "2023-02-14"
+output: html_document
+---
+
+
+# Problem Set 4
+
+## Question 6
+
+### a.) 
+
+```{r, echo = F, message = F, out.width="50%"}
+library(knitr) # kable
+library(ggplot2)
+library(plotly)
+library(MASS) # glm.nb()
+library(lawstat) # runs test
+
+chemo <- read.table("chemo.dat")
+names(chemo) <-
+  c(
+    "ID",
+    "1st.Period",
+    "2nd.Period",
+    "3rd.Period",
+    "4th.Period",
+    "Treatment",
+    "Baseline",
+    "Patient.Age"
+  )
+chemo["Seiz.Count"] <-
+  chemo[, 2] + chemo[, 3] + chemo[, 4] + chemo[, 5]
+chemo <- chemo[,-c(1:5)]
+# Preview our cleaned dataset
+#kable(head(chemo))
+
+# Scatter of Treatment vs Seiz.Count
+#ggplot(data = chemo, aes(x = Seiz.Count, y = Treatment)) + geom_point()
+# One point with a total amount of seizures over 300
+#kable(chemo[which(chemo["Seiz.Count"] >= 300), ])
+# Remove the outlier
+chemo.out <- which(chemo["Seiz.Count"] >= 300)
+chemo <- chemo[-49,]
+chemo.fit <-
+  glm(
+    Seiz.Count ~ as.factor(Treatment) + Baseline + Patient.Age,
+    data = chemo,
+    family = poisson()
+  )
+chemo.fit.sum <- summary(chemo.fit)
+kable(chemo.fit.sum$coefficients)
+
+plot(chemo.fit, which = c(4, 5))
+```
+
+From our first plot, we can see that that observation 18 has the highest Cooks distance, indicating that it
+is an influential outlier. We can also see more clearly from our second plot that observation 8 is another high
+leverage outlier, but it is much smaller in reference in to observation 18. 
+
+### b.) 
+
+```{r, echo = F}
+dispersion <- chemo.fit$deviance / (nrow(chemo) - length(chemo.fit$coefficients))
+```
+
+In our data, we have a very high amout of overdispersion, with a dispersion factor $\sigma^2 = 10.36$, thus we have a violation of the classical poisson assumptions and should find a better model. Overdispersion can arrise when our counts have larger variation than expected. 
+
+### c.) 
+
+```{r, echo = F, out.width="50%"}
+# Fitting a negative binom without theta
+chemo.fit.nb<-
+  glm.nb(
+    Seiz.Count ~ as.factor(Treatment) + Baseline + Patient.Age,
+    data = chemo
+  )
+kable(summary(chemo.fit.nb)$coefficients)
+
+# Checking goodness of fit
+residPear <- residuals(chemo.fit.nb, type = "pearson")
+residDev <- residuals(chemo.fit.nb, type = "deviance")
+residData <- data.frame(residPear, residDev)
+names(residData) <- c("Pearson", "Deviance")
+#kable(head(residData, 5))
+#kable(summary(residData))
+# Boxplots of both residual types
+boxplot(residData)
+
+#kable(anova(chemo.fit.nb, test = "Chisq"))
+runs.test(y = residDev, plot.it = TRUE)
+
+dispersion.nb <- chemo.fit.nb$deviance / (nrow(chemo) - length(chemo.fit.nb$coefficients))
+```
+
+After fitting our negative binomial model, we can see from both the comparison of residuals and the runs test that our model is a good fit. Runs test shows no obvious pattern. Our dispersion for the model is now only $\sigma^2 = 1.16$, a huge improvement from the classical Poisson model used before. 
+
+## Question 7 
+
+### a.) 
+
+The most appropriate glm for an approach to this analysis would be the poisson regression, where our response would be the counts of infected individuals, and the snail control index, medical access index, hygeine index, and number of inhabitants would be predictors. This is under the assumption that the counts are distributed Poisson and we do not have over dispersion in the model. Hygeine index would be coded with bad as the baseline and split into two dummy variables: one for medium and the other for good. 
+
+### b.) 
+
+We would expect the number of inhabitants in the village to be a relevant predictor. If the number of inhabitants is larger, we would expect to see a larger number of inhabitants infected. If the predictor is signficant, we would keep the variable encoded as a continuous predictor. 
+
+### c.) 
+```{r, echo = FALSE}
+library(DescTools)
+#Canvas()
+#DrawEllipse(rot = c(1:3) * pi/3, col=SetAlpha(c("blue","red","green"), 0.5))
+
+xc <- 1 # center x_c or h
+yc <- 2 # y_c or k
+a <- 4 # major axis length
+b <- 2 # minor axis length
+phi <- pi/3 # angle of major axis with x axis phi or tau
+
+t <- seq(0, 2*pi, 0.01) 
+x <- xc + a*cos(t)*cos(phi) - b*sin(t)*sin(phi)
+y <- yc + a*cos(t)*cos(phi) + b*sin(t)*cos(phi)
+plot(x,y,pch=12, xlab = "Beta1", ylab = "Beta3")
+```
+
+We could have a 95% confidence ellipsoid such as the one above for the $\beta$ coefficients for snail control index and access to medical facility variables. We would use the sample coefficients for each respective variable to test a hypothesis involving the two coefficients. 
+
+### d.) 
+
+We would want to test the hypothesis:
+
+$$
+H_0: \beta_1 \leq \beta_3 \\
+H_a: \beta_1 > \beta_3
+$$
+
+which could be rewritten as: 
+$$
+H_0: \beta_1 - \beta_3 \leq\\
+H_a: \beta_1 - \beta_3 > 0
+$$
+
+where $\beta_1$ is the coefficient for controlling snails and $\beta_3$ is the coefficient for medical access. We would create a test statistic that would be the subtraction of the sample coefficients $\hat{\beta_1}$ and $\hat{\beta_3}$, which would be distributed $N(\beta_1 - \beta_3, \Sigma)$
+
+### e.) 
+
+We would notice that because of this fact, we would have a much larger amount of zero counts in the model than expected, so as a consequence we would have overdispersion. If we were to have a model that fit, we would not have our null counts being fit correctly, as it is very plausable that it will have a different distribution than the non-zero counts. 
+
+## Question 8
+
+### a.) 
+
+```{r, echo = F, message = F}
+wine <- read.table("wine-multinomial.txt", header = T)
+
+library(dplyr)
+library(forcats)
+
+# Turn quality into factor for fct_collapse
+wine$quality <- as.factor(wine$quality)
+
+wine <-
+  wine %>% mutate(newQuality = fct_collapse(
+    quality,
+    "Low" = c(1:3),
+    "Medium" = 4,
+    "Good" = c(5, 6)
+  ))
+
+# Proportional odds model
+wine.prop.fit <- polr(formula = newQuality ~ . - quality, data = wine)
+kable(summary(wine.prop.fit)$coefficients)
+
+
+   # Baseline odds
+library(nnet)
+wine.base.fit <- multinom(formula = newQuality ~ . - quality, data = wine)
+kable(t(summary(wine.base.fit)$coefficients))
+
+# Perform a two sided hypothesis test
+pval.wine <- 2 * pnorm(abs(summary(wine.prop.fit)$coefficients[,3]), lower.tail = F)
+
+cbind(summary(wine.prop.fit)$coefficients, pval.wine)
+```
+
+From the fitting of the proportional odds and the baseline odds models, we can see that the fits are very close in accuracy.Our proportional and baseline odds models return an AIC of $2474.01$ and $2475.753$ respectively. We can see that the predictor "density" has a far greater influence on wine quality than any other predictor, given its very large coefficient. We can notice that in the baseline odds model, the density has a positive effect for medium ratings and a negative effect on good ratings. If we compare this to the proportional odds model, we see that we only have a negative coefficient overall. The significant predictors in these models are all but pH.
+
+### b.) 
+
+```{r, echo = F}
+wine <-
+  wine %>% mutate(quality2 = fct_collapse(
+    quality,
+    "Not so good" = c(1:3),
+    "Good" = c(4, 6)
+  ))
+
+wine.fit.log <- glm(formula = newQuality ~ . - quality - newQuality, data = wine, family = binomial())
+kable(summary(wine.fit.log)$coefficients)
+```
+
+Now using a logistic regression with only two categories in the response, we have a model with a much lower AIC. In this model, we can see that the relevant predictors are volatile acidity, citric acid, chlorides, free sulfur dioxide, total sulfur dioxide, sulphates, and alcohol.
+
+### c.) 
+
+Given the lower AIC and deviance, it would be best to use the logistic regression model. The logistic regression model also creates a simpler model with more relevant predictors, which we do not see in our multinomial models. 
+
+## Question 11
+
+### a.) 
+
+The GLM components would be our response, *s*, the number of spikes recorded in the time interval. Our predictors would be speed *v*, acceleration *a*, and eye movement velocity *e*. We would use a count regression model as our best fit. 
+
+### b.) 
