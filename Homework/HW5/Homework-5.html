@@ -563,96 +563,6 @@ non-zero counts.</p>
 <h2>Question 8</h2>
 <div id="a.-2" class="section level3">
 <h3>a.)</h3>
-<table>
-<thead>
-<tr class="header">
-<th align="left"></th>
-<th align="right">Value</th>
-<th align="right">Std. Error</th>
-<th align="right">t value</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td align="left">fixed.acidity</td>
-<td align="right">0.1894909</td>
-<td align="right">0.0535620</td>
-<td align="right">3.5377875</td>
-</tr>
-<tr class="even">
-<td align="left">volatile.acidity</td>
-<td align="right">-3.0882525</td>
-<td align="right">0.4312538</td>
-<td align="right">-7.1611020</td>
-</tr>
-<tr class="odd">
-<td align="left">citric.acid</td>
-<td align="right">-0.8149960</td>
-<td align="right">0.4947367</td>
-<td align="right">-1.6473330</td>
-</tr>
-<tr class="even">
-<td align="left">residual.sugar</td>
-<td align="right">0.1256961</td>
-<td align="right">0.0395798</td>
-<td align="right">3.1757612</td>
-</tr>
-<tr class="odd">
-<td align="left">chlorides</td>
-<td align="right">-5.1314377</td>
-<td align="right">1.4464174</td>
-<td align="right">-3.5476880</td>
-</tr>
-<tr class="even">
-<td align="left">free.sulfur.dioxide</td>
-<td align="right">0.0173645</td>
-<td align="right">0.0073051</td>
-<td align="right">2.3770272</td>
-</tr>
-<tr class="odd">
-<td align="left">total.sulfur.dioxide</td>
-<td align="right">-0.0170623</td>
-<td align="right">0.0027653</td>
-<td align="right">-6.1700973</td>
-</tr>
-<tr class="even">
-<td align="left">density</td>
-<td align="right">-119.8533815</td>
-<td align="right">1.0078356</td>
-<td align="right">-118.9215540</td>
-</tr>
-<tr class="odd">
-<td align="left">pH</td>
-<td align="right">-0.2423291</td>
-<td align="right">0.5194272</td>
-<td align="right">-0.4665314</td>
-</tr>
-<tr class="even">
-<td align="left">sulphates</td>
-<td align="right">3.1798018</td>
-<td align="right">0.3670429</td>
-<td align="right">8.6632983</td>
-</tr>
-<tr class="odd">
-<td align="left">alcohol</td>
-<td align="right">0.8152740</td>
-<td align="right">0.0609239</td>
-<td align="right">13.3818516</td>
-</tr>
-<tr class="even">
-<td align="left">Low|Medium</td>
-<td align="right">-110.8748681</td>
-<td align="right">1.0318207</td>
-<td align="right">-107.4555544</td>
-</tr>
-<tr class="odd">
-<td align="left">Medium|Good</td>
-<td align="right">-107.9737745</td>
-<td align="right">1.0449156</td>
-<td align="right">-103.3325338</td>
-</tr>
-</tbody>
-</table>
 <pre><code>## # weights:  39 (24 variable)
 ## initial  value 1756.681050 
 ## iter  10 value 1424.322261
@@ -734,20 +644,117 @@ non-zero counts.</p>
 </tr>
 </tbody>
 </table>
-<pre><code>##                              Value  Std. Error      t value    pval.wine
-## fixed.acidity           0.18949089 0.053561976    3.5377875 4.034946e-04
-## volatile.acidity       -3.08825253 0.431253808   -7.1611020 8.003104e-13
-## citric.acid            -0.81499602 0.494736661   -1.6473330 9.948962e-02
-## residual.sugar          0.12569609 0.039579830    3.1757612 1.494439e-03
-## chlorides              -5.13143769 1.446417399   -3.5476880 3.886283e-04
-## free.sulfur.dioxide     0.01736449 0.007305127    2.3770272 1.745280e-02
-## total.sulfur.dioxide   -0.01706230 0.002765321   -6.1700973 6.824797e-10
-## density              -119.85338149 1.007835648 -118.9215540 0.000000e+00
-## pH                     -0.24232911 0.519427168   -0.4665314 6.408351e-01
-## sulphates               3.17980182 0.367042863    8.6632983 4.583070e-18
-## alcohol                 0.81527397 0.060923854   13.3818516 7.719998e-41
-## Low|Medium           -110.87486807 1.031820725 -107.4555544 0.000000e+00
-## Medium|Good          -107.97377453 1.044915580 -103.3325338 0.000000e+00</code></pre>
+<table>
+<colgroup>
+<col width="30%" />
+<col width="19%" />
+<col width="16%" />
+<col width="19%" />
+<col width="14%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="right">Value</th>
+<th align="right">Std. Error</th>
+<th align="right">t value</th>
+<th align="right">pval.wine</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">fixed.acidity</td>
+<td align="right">0.1894909</td>
+<td align="right">0.0535620</td>
+<td align="right">3.5377875</td>
+<td align="right">0.0004035</td>
+</tr>
+<tr class="even">
+<td align="left">volatile.acidity</td>
+<td align="right">-3.0882525</td>
+<td align="right">0.4312538</td>
+<td align="right">-7.1611020</td>
+<td align="right">0.0000000</td>
+</tr>
+<tr class="odd">
+<td align="left">citric.acid</td>
+<td align="right">-0.8149960</td>
+<td align="right">0.4947367</td>
+<td align="right">-1.6473330</td>
+<td align="right">0.0994896</td>
+</tr>
+<tr class="even">
+<td align="left">residual.sugar</td>
+<td align="right">0.1256961</td>
+<td align="right">0.0395798</td>
+<td align="right">3.1757612</td>
+<td align="right">0.0014944</td>
+</tr>
+<tr class="odd">
+<td align="left">chlorides</td>
+<td align="right">-5.1314377</td>
+<td align="right">1.4464174</td>
+<td align="right">-3.5476880</td>
+<td align="right">0.0003886</td>
+</tr>
+<tr class="even">
+<td align="left">free.sulfur.dioxide</td>
+<td align="right">0.0173645</td>
+<td align="right">0.0073051</td>
+<td align="right">2.3770272</td>
+<td align="right">0.0174528</td>
+</tr>
+<tr class="odd">
+<td align="left">total.sulfur.dioxide</td>
+<td align="right">-0.0170623</td>
+<td align="right">0.0027653</td>
+<td align="right">-6.1700973</td>
+<td align="right">0.0000000</td>
+</tr>
+<tr class="even">
+<td align="left">density</td>
+<td align="right">-119.8533815</td>
+<td align="right">1.0078356</td>
+<td align="right">-118.9215540</td>
+<td align="right">0.0000000</td>
+</tr>
+<tr class="odd">
+<td align="left">pH</td>
+<td align="right">-0.2423291</td>
+<td align="right">0.5194272</td>
+<td align="right">-0.4665314</td>
+<td align="right">0.6408351</td>
+</tr>
+<tr class="even">
+<td align="left">sulphates</td>
+<td align="right">3.1798018</td>
+<td align="right">0.3670429</td>
+<td align="right">8.6632983</td>
+<td align="right">0.0000000</td>
+</tr>
+<tr class="odd">
+<td align="left">alcohol</td>
+<td align="right">0.8152740</td>
+<td align="right">0.0609239</td>
+<td align="right">13.3818516</td>
+<td align="right">0.0000000</td>
+</tr>
+<tr class="even">
+<td align="left">Low|Medium</td>
+<td align="right">-110.8748681</td>
+<td align="right">1.0318207</td>
+<td align="right">-107.4555544</td>
+<td align="right">0.0000000</td>
+</tr>
+<tr class="odd">
+<td align="left">Medium|Good</td>
+<td align="right">-107.9737745</td>
+<td align="right">1.0449156</td>
+<td align="right">-103.3325338</td>
+<td align="right">0.0000000</td>
+</tr>
+</tbody>
+</table>
 <p>From the fitting of the proportional odds and the baseline odds
 models, we can see that the fits are very close in accuracy.Our
 proportional and baseline odds models return an AIC of <span class="math inline">\(2474.01\)</span> and <span class="math inline">\(2475.753\)</span> respectively. We can see that
@@ -905,6 +912,49 @@ spikes recorded in the time interval. Our predictors would be speed
 </div>
 <div id="b.-3" class="section level3">
 <h3>b.)</h3>
+<p>The best approach would be to remove these observations where there
+are no counts and form a zero-inflated model. We would then define a
+parameter <span class="math inline">\(\alpha_i\)</span> to account for
+structural zeros.</p>
+</div>
+<div id="c.-3" class="section level3">
+<h3>c.)</h3>
+<p>To incorporate an interaction, we would start by adding a new column
+to the regression model that is the multiplication of <em>e</em> and
+<em>v</em> and creating a new predictor variable.</p>
+</div>
+<div id="d.-1" class="section level3">
+<h3>d.)</h3>
+<p>Use of a classical poisson model would be rare. If we had a large
+amount of zeros, we would use a zero-inflation model. If overdispersion
+was present, which is likely, we would use a negative binomial model. If
+we had both zero-inflation and overdispersion, than we would use a ZINB
+model. If none of these situations occured, we could fit a classical
+poisson, assuming it would be a good fit.</p>
+</div>
+</div>
+<div id="question-12" class="section level2">
+<h2>Question 12</h2>
+<div id="a.-4" class="section level3">
+<h3>a.)</h3>
+<p>We could create a count regression model where we subtract 10 from
+all the values, and then use a mixture model for all the negative
+values. We would also need to create a zero-inflation model, since now
+there would be a larger amount of zeros because we are subtracting 10s
+from all the misrecordings and the legitimate 10s.</p>
+</div>
+<div id="b.-4" class="section level3">
+<h3>b.)</h3>
+<p>We could fit the model by testing for over dispersion, to decide
+whether a Poisson or a Negative Binomial model.</p>
+</div>
+<div id="c.-4" class="section level3">
+<h3>c.)</h3>
+<p>We would take the proportion of zeros and divide by the average of
+the proportion of 9s and 11s (before the transformation, -1s and 1s
+after). This way we could get an estimate of the values of 10s that were
+actually observed..</p>
+<p>We would</p>
 </div>
 </div>
 </div>

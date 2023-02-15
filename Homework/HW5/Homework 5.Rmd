@@ -171,10 +171,10 @@ wine <-
 
 # Proportional odds model
 wine.prop.fit <- polr(formula = newQuality ~ . - quality, data = wine)
-kable(summary(wine.prop.fit)$coefficients)
+#kable(summary(wine.prop.fit)$coefficients)
 
 
-   # Baseline odds
+# Baseline odds
 library(nnet)
 wine.base.fit <- multinom(formula = newQuality ~ . - quality, data = wine)
 kable(t(summary(wine.base.fit)$coefficients))
@@ -182,7 +182,7 @@ kable(t(summary(wine.base.fit)$coefficients))
 # Perform a two sided hypothesis test
 pval.wine <- 2 * pnorm(abs(summary(wine.prop.fit)$coefficients[,3]), lower.tail = F)
 
-cbind(summary(wine.prop.fit)$coefficients, pval.wine)
+kable(cbind(summary(wine.prop.fit)$coefficients, pval.wine))
 ```
 
 From the fitting of the proportional odds and the baseline odds models, we can see that the fits are very close in accuracy.Our proportional and baseline odds models return an AIC of $2474.01$ and $2475.753$ respectively. We can see that the predictor "density" has a far greater influence on wine quality than any other predictor, given its very large coefficient. We can notice that in the baseline odds model, the density has a positive effect for medium ratings and a negative effect on good ratings. If we compare this to the proportional odds model, we see that we only have a negative coefficient overall. The significant predictors in these models are all but pH.
@@ -214,3 +214,26 @@ Given the lower AIC and deviance, it would be best to use the logistic regressio
 The GLM components would be our response, *s*, the number of spikes recorded in the time interval. Our predictors would be speed *v*, acceleration *a*, and eye movement velocity *e*. We would use a count regression model as our best fit. 
 
 ### b.) 
+The best approach would be to remove these observations where there are no counts and form a zero-inflated model. We would then define a parameter $\alpha_i$ to account for structural zeros. 
+
+### c.) 
+To incorporate an interaction, we would start by adding a new column to the regression model that is the multiplication of *e* and *v* and creating a new predictor variable. 
+
+### d.)  
+Use of a classical poisson model would be rare. If we had a large amount of zeros, we would use a zero-inflation model. If overdispersion was present, which is likely, we would use a negative binomial model. If we had both zero-inflation and overdispersion, than we would use a ZINB model. If none of these situations occured, we could fit a classical poisson, assuming it would be a good fit. 
+
+## Question 12
+
+### a.) 
+
+We could create a count regression model where we subtract 10 from all the values, and then use a mixture model for all the negative values. We would also need to create a zero-inflation model, since now there would be a larger amount of zeros because we are subtracting 10s from all the misrecordings and the legitimate 10s. 
+
+### b.) 
+
+We could fit the model by testing for over dispersion, to decide whether a Poisson or a Negative Binomial model. 
+
+### c.) 
+
+We would take the proportion of zeros and divide by the average of the proportion of 9s and 11s (before the transformation, -1s and 1s after). This way we could get an estimate of the values of 10s that were actually observed.. 
+
+We would 
