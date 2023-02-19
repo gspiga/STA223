@@ -1,0 +1,140 @@
+---
+title: "Project 1"
+author: "Gianni Spiga"
+date: '2023-02-17'
+output: html_document
+---
+
+```{r}
+# Libraries 
+library(knitr)
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(plotly)
+library(MASS)
+```
+```{r}
+# Loading in the data, we will use day.csv since it includes hour of the day 
+bike <- read.csv("day.csv")
+bike
+
+# cnt is a linear combination of causual and registered bikes, so we will drop causual anf registered columns and use count. We will also drop instant, which is just an index column
+
+# Temperature and Feeling temperature (temp and atemp) are nearly perfectly correlated, so we will drop column atemp
+cor(bike$temp, bike$atemp)
+
+# Error with select() when both dplyr and MASS libraries are loaded in,  
+# https://www.statology.org/dplyr-error-in-select-unused-arguments/
+bike.cor <- cor(bike %>% dplyr::select(-c(instant, dteday)))
+
+#bike.cor <- cor(bike[,-1:-2])
+
+# We make a correaltion heat map
+bike.cor <- melt(bike.cor)
+
+ggplotly(ggplot(bike.cor, aes(x = Var1,
+                  y = Var2,
+                  fill = value))+geom_tile() +  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)))
+
+
+# turn columns season, year, weekday, workingday, weathersit into factors
+cols <- c("season", "yr", "weekday", "workingday", "weathersit")
+bike[cols] <- lapply(bike[cols], factor)
+bike
+
+# Working day is going to be linearly dependent on holiday and weekday, so we will remove it as well
+
+#  Reduced bike 
+bike.r <-
+  dplyr::select(bike, -c("instant","dteday", "atemp", "casual", "registered", "workingday")) %>% na.omit()
+
+# No NA values present in the data
+bike.r
+
+# Explore the dataset types
+str(bike.r)
+
+# declaring n
+n <- nrow(bike.r)
+```
+
+````{r}
+cor(select(bike, -1))
+
+# Visualizations
+ggplotly(ggplot(bike.r, aes(x = cnt)) + geom_histogram(bins = 20))
+
+
+ggplot(bike, aes(x = cnt, fill = season)) + geom_boxplot()
+
+ggplot(bike, aes(x = cnt, fill = weathersit)) + geom_boxplot()
+
+ggplot(bike, aes(x = cnt, fill = season)) + geom_boxplot()
+
+# We do not have heavy rain present in the data
+table(bike.r$weathersit)
+
+# for working day
+table(bike.r$workingday)
+
+model <- glm(cnt ~ .-dteday, data = bike.r, family = poisson())
+summary(model)
+
+
+# Checking for overdispersion 
+sigma2 <- model$deviance/(nrow(bike.r)-length(coef(model)))
+sigma2
+
+# Very large overdispersion 
+```
+```{r}
+# Building a negative binomial model 
+?glm.nb
+
+nb.model<- glm.nb(cnt ~ ., data = bike.r)
+
+# The dispersion is much better 
+nb.model$deviance / (nrow(bike.r)-length(coef(nb.model)))
+
+summary(nb.model)
+
+# Stepwise regression, using BIC since we are focused on finding the true model rather than looking to predict
+### THIS IS ONLY BACKWARDS SINCE NO SCOPE IS DEFINED
+stepAIC(nb.model, trace = TRUE, k = log(n))
+
+# WE CAN GO FORWARD AND BACKWARD WHEN DEFINING A SCOPE
+Scope = list(upper = ~ season + yr + mnth + holiday + weekday + weathersit + temp + 
+    hum + windspeed, lower = ~1)
+stepAIC(nb.model, trace = TRUE, scope = Scope, k = log(n))
+
+# These both pick the same model, so we will build a new glm with these predictors
+nb.mod.step <- glm.nb(cnt ~ season + yr + holiday + weathersit + temp + 
+    hum + windspeed, data = bike.r)
+summary(nb.mod.step)
+
+# Dispersion is even closer to 1
+nb.mod.step$deviance / (n-length(coef(nb.mod.step)))
+
+boxplot(nb.mod.step$residuals)
+
+```
+
+Test for regression effect 
+$$
+H_0: \beta_1 = \ldots = \beta_p = 0 \\ 
+H_a: \beta_1 \neq \ldots \neq \beta_p = 0
+$$
+
+```{r}
+# Testing for overall regression effect (PG 44 of notes)
+h0.fit = glm.nb(cnt~1,
+             data = bike.r)
+h0.fit
+anova(h0.fit, nb.mod.step, test="Chi")
+
+# We reject H_0
+
+# Lets compare our stepwise with our full model 
+anova(nb.model, nb.mod.step, test = "Chi")
+```
