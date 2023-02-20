@@ -62,17 +62,66 @@ n <- nrow(bike.r)
 ```
 
 ````{r}
-#cor(dplyr::select(bike, -1))
+### Tables
+# Season - should be very close
+table(bike.r$season)
 
-# Visualizations
-ggplotly(ggplot(bike.r, aes(x = cnt)) + geom_histogram(bins = 20))
+# Month - shoul also be very close
+table(bike.r$mnth)
+
+# Holiday
+table(bike.r$holiday)
+
+# We do not have heavy rain present in the data
+table(bike.r$weathersit)
 
 
-ggplot(bike, aes(x = cnt, fill = season)) + geom_boxplot()
 
-ggplot(bike, aes(x = cnt, fill = weathersit)) + geom_boxplot()
+1#cor(dplyr::select(bike, -1))
 
-ggplot(bike, aes(x = cnt, fill = season)) + geom_boxplot()
+### Visualizations
+# Histograms
+ggplotly(
+  ggplot(bike.r, aes(x = cnt)) + geom_histogram(bins = 20, fill = "firebrick") + labs(x = "Count of Registered and Casual Bicycles", y = "Quantity Recorded", title = "Histogram of Total Users")
+)
+
+
+ggplotly(ggplot(bike, aes(x = cnt, fill = season)) + geom_histogram(
+  bins = 25,
+  alpha = 0.8,
+  position = "identity"
+) + labs(x = "Count of Registered and Casual Bicycles", y = "Quantity Recorded" , title = "Histogram of Total Users Seperated by Season"))
+
+# Boxplots
+count o
+
+
+ ggplot(bike, aes(x = season, y = cnt, fill = season)) + geom_boxplot()+ labs(
+    x = "Count of Registered and Casual Bicycles",
+    y = "Normalized Temperature in Celsius" ,
+    title = "Normalized Temperature vs. Bikes Rented Colored by Weather Conditions",
+    fill = "Season"
+  )
+
+# Scatter plots
+ggplotly(
+  ggplot(bike, aes(
+    x = cnt, y = temp, color = season
+  )) + geom_point() + labs(x = "Count of Registered and Casual Bicycles", y = "Normalized Temperature in Celsius" , title = "Normalized Temperature vs. Bikes Rented Each Day Colored by Season")
+)
+
+ggplotly(
+  ggplot(bike, aes(
+    x = cnt, y = temp, color = weathersit
+  )) + geom_point() + labs(
+    x = "Count of Registered and Casual Bicycles",
+    y = "Normalized Temperature in Celsius" ,
+    title = "Normalized Temperature vs. Bikes Rented Colored by Weather Conditions",
+    color = "Weather Condition"
+  )
+)
+
+ggplot(data = bike.r, aes(x = weekday, y = cnt, fill = weekday)) + geom_boxplot()
 
 # We do not have heavy rain present in the data
 table(bike.r$weathersit)
@@ -118,6 +167,12 @@ summary(nb.mod.step)
 # Dispersion is even closer to 1
 nb.mod.step$deviance / (n-length(coef(nb.mod.step)))
 
+
+# Residuals
+res.P = residuals(nb.mod.step, type="pearson")
+res.D = residuals(nb.mod.step, type="deviance") #or residuals(fit), by default
+boxplot(cbind(res.P, res.D), names = c("Pearson", "Deviance"))
+
 boxplot(nb.mod.step$residuals)
 
 ```
@@ -139,4 +194,6 @@ anova(h0.fit, nb.mod.step, test="Chi")
 
 # Lets compare our stepwise with our full model 
 anova(nb.model, nb.mod.step, test = "Chi")
+
+anova(nb.mod.step,nb.model, test = "Chi")
 ```
