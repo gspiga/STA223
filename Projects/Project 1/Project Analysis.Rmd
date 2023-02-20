@@ -41,7 +41,7 @@ ggplotly(ggplot(bike.cor, aes(x = Var1,
 
 
 # turn columns season, year, weekday, workingday, weathersit into factors
-cols <- c("season", "yr", "weekday", "workingday", "weathersit")
+cols <- c("season", "yr", "mnth", "holiday","weekday", "workingday", "weathersit")
 bike[cols] <- lapply(bike[cols], factor)
 bike
 
@@ -62,7 +62,7 @@ n <- nrow(bike.r)
 ```
 
 ````{r}
-cor(select(bike, -1))
+#cor(dplyr::select(bike, -1))
 
 # Visualizations
 ggplotly(ggplot(bike.r, aes(x = cnt)) + geom_histogram(bins = 20))
@@ -80,7 +80,7 @@ table(bike.r$weathersit)
 # for working day
 table(bike.r$workingday)
 
-model <- glm(cnt ~ .-dteday, data = bike.r, family = poisson())
+model <- glm(cnt ~ ., data = bike.r, family = poisson())
 summary(model)
 
 
