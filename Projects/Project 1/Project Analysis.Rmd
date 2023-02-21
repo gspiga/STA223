@@ -93,10 +93,8 @@ ggplotly(ggplot(bike, aes(x = cnt, fill = season)) + geom_histogram(
 ) + labs(x = "Count of Registered and Casual Bicycles", y = "Quantity Recorded" , title = "Histogram of Total Users Seperated by Season"))
 
 # Boxplots
-count o
 
-
- ggplot(bike, aes(x = season, y = cnt, fill = season)) + geom_boxplot()+ labs(
+ggplot(bike, aes(x = season, y = cnt, fill = season)) + geom_boxplot()+ labs(
     x = "Count of Registered and Casual Bicycles",
     y = "Normalized Temperature in Celsius" ,
     title = "Normalized Temperature vs. Bikes Rented Colored by Weather Conditions",
@@ -175,6 +173,19 @@ boxplot(cbind(res.P, res.D), names = c("Pearson", "Deviance"))
 
 boxplot(nb.mod.step$residuals)
 
+
+
+# Searching for model with interactions 
+int.model <- glm.nb(cnt ~ (season + yr + holiday + weathersit + temp +hum + windspeed)^2, data = bike.r)
+int.model.step <- stepAIC(int.model, trace = F, k = log(n))
+summary(int.model.step)
+
+int.model$deviance / (n-length(coef(int.model)))
+
+
+# weathersit3 non signficant, making new dataframe where weathersit is encoded as 1 for clear and 0 for other
+bike.enc <- bike.r %>% mutate(weathersit = replace(weathersit, weathersit != "1","2"))
+bike.enc
 ```
 
 Test for regression effect 
