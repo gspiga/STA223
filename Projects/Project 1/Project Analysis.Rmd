@@ -15,6 +15,7 @@ library(ggplot2)
 library(reshape2)
 library(plotly)
 library(MASS)
+library(xtable) # For latex table
 ```
 ```{r}
 # Loading in the data, we will use day.csv since it includes hour of the day 
@@ -93,6 +94,10 @@ ggplotly(ggplot(bike, aes(x = cnt, fill = season)) + geom_histogram(
 ) + labs(x = "Count of Registered and Casual Bicycles", y = "Quantity Recorded" , title = "Histogram of Total Users Seperated by Season"))
 
 # Boxplots
+ggplot(bike, aes(x = cnt, y = weekday, fill = yr)) + geom_boxplot() + scale_y_discrete(labels = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")) + labs(x = "Count of Registered and Casual Bicycles", y = "Day of the Week", fill = "Year") + scale_fill_discrete(labels=c("2011", "2012"))
+
+# Check medians for interpretation 
+bike.r %>% group_by(yr, weekday) %>% summarise(med = median(cnt))
 
 ggplot(bike, aes(x = season, y = cnt, fill = season)) + geom_boxplot()+ labs(
     x = "Count of Registered and Casual Bicycles",
@@ -166,15 +171,6 @@ summary(nb.mod.step)
 nb.mod.step$deviance / (n-length(coef(nb.mod.step)))
 
 
-# Residuals
-res.P = residuals(nb.mod.step, type="pearson")
-res.D = residuals(nb.mod.step, type="deviance") #or residuals(fit), by default
-boxplot(cbind(res.P, res.D), names = c("Pearson", "Deviance"))
-
-boxplot(nb.mod.step$residuals)
-
-
-
 # Searching for model with interactions 
 int.model <- glm.nb(cnt ~ (season + yr + holiday + weathersit + temp +hum + windspeed)^2, data = bike.r)
 int.model.step <- stepAIC(int.model, trace = F, k = log(n))
@@ -185,16 +181,80 @@ int.model$deviance / (n-length(coef(int.model)))
 
 # weathersit3 non signficant, making new dataframe where weathersit is encoded as 1 for clear and 0 for other
 bike.enc <- bike.r %>% mutate(weathersit = replace(weathersit, weathersit != "1","2"))
-bike.enc
+#bike.enc
+
+# Build a reduced model now with the new encoded weathersit
+int.model.red <-
+  glm.nb(
+    cnt ~ season + yr + holiday + weathersit + temp + hum + windspeed + season:temp + yr:temp + weathersit:hum + weathersit:windspeed,
+    data = bike.enc
+  )
+summary(int.model.red)
+
+# Final stepwise regression with reduced interaction model and new encoding
+newScope <- list(upper = ~ season + yr + holiday + weathersit + temp + hum + windspeed + season:temp + yr:temp + weathersit:hum + weathersit:windspeed, lower = ~1)
+int.model.redstep <- stepAIC(int.model.red, scope = newScope, trace = T, k = log(n), direction = 'both') 
+summary(int.model.redstep)
+
+# Final Model with summary
+final.model <- int.model.redstep
+sumFin <- summary(final.model)
+
+# Creating 95% CI for coefficients
+coefCI <- cbind(sumFin$coef[,1], sumFin$coef[,1] - 1.96*sumFin$coef[,2], sumFin$coef[,1] + 1.96*sumFin$coef[,2])
+colnames(coefCI) <- c("Coefficient", "95% CI Lower", "95% CI Upper")
+
+#xtable(coefCI)
+```
+# Sensitivity Analysis
+```{r}
+# Residuals
+res.P = residuals(final.model, type="pearson")
+res.D = residuals(final.model, type="deviance") #or residuals(fit), by default
+boxplot(cbind(res.P, res.D), names = c("Pearson", "Deviance"))
+
+boxplot(nb.mod.step$residuals)
+
+# Outliers
+png(file="cooks.png")
+plot(final.model, which = 4)
+dev.off()
+
+png(file="leverage.png")
+plot(final.model, which = 5)
+dev.off()
+
+
+# Observing high leverage points
+#xtable(bike.enc[c(65, 668, 725),])
+
+# Check medians for interpretation 
+bike.enc %>% group_by(yr, mnth) %>% summarise(med = median(cnt), meanHum = mean(hum))
+
+
+bike.enc.red <- (bike.enc[-c(65, 668, 725),])
+final.model.red <- glm.nb(cnt~ season + yr + holiday + weathersit + temp + hum + windspeed + season:temp + yr:temp + weathersit:hum + weathersit:windspeed, data = bike.enc.red)
+sumFin
+summary(final.model.red)
 ```
 
-Test for regression effect 
+## Test for regression effect (LRT)
+
 $$
-H_0: \beta_1 = \ldots = \beta_p = 0 \\ 
-H_a: \beta_1 \neq \ldots \neq \beta_p = 0
+H_0: \beta_{10} = \ldots = \beta_{15} = 0 \\ 
+H_a: \beta_{10} \neq \ldots \neq \beta_{15} \neq 0
 $$
 
 ```{r}
+# Comparing reduced model with interactions to main effects only model
+nb.mod.step <- glm.nb(cnt ~ season + yr + holiday + weathersit + temp + 
+    hum + windspeed, data = bike.enc)
+summary(nb.mod.step)
+
+anova(nb.mod.step, final.model)
+
+
+
 # Testing for overall regression effect (PG 44 of notes)
 h0.fit = glm.nb(cnt~1,
              data = bike.r)
