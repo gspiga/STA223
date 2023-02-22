@@ -142,6 +142,7 @@ sigma2
 
 # Very large overdispersion 
 ```
+
 ```{r}
 # Building a negative binomial model 
 ?glm.nb
@@ -179,7 +180,7 @@ summary(int.model.step)
 int.model$deviance / (n-length(coef(int.model)))
 
 
-# weathersit3 non signficant, making new dataframe where weathersit is encoded as 1 for clear and 0 for other
+# weathersit3 non signficant, making new dataframe where weathersit is encoded as 1 for clear and 2 for other
 bike.enc <- bike.r %>% mutate(weathersit = replace(weathersit, weathersit != "1","2"))
 #bike.enc
 
@@ -208,12 +209,50 @@ colnames(coefCI) <- c("Coefficient", "95% CI Lower", "95% CI Upper")
 ```
 # Sensitivity Analysis
 ```{r}
-# Residuals
-res.P = residuals(final.model, type="pearson")
-res.D = residuals(final.model, type="deviance") #or residuals(fit), by default
-boxplot(cbind(res.P, res.D), names = c("Pearson", "Deviance"))
+# Runs test is going to show pattern based on order, we should reorder data for model, create a new shuffled data set and rebuild models to test residuals 
+# using dplyr 
+bike.shuffle <- dplyr::slice(bike.enc, sample(1:n()))
+
+# Rebuild model based on shuffled data
+run.mod.main <- glm.nb(cnt ~ season + yr + holiday + weathersit + temp + 
+    hum + windspeed, data = bike.shuffle)
+#summary(run.mod.main)
+run.mod.int <- glm.nb(cnt ~ season + yr + holiday + weathersit + temp + hum + windspeed + season:temp + yr:temp + weathersit:hum + weathersit:windspeed, data = bike.shuffle)
+summary(run.mod.int)
+
+library(ggformula)
+### Residual Analysis
+res.P.main = residuals(run.mod.main, type="pearson")
+res.D.main = residuals(run.mod.main, type="deviance") #or residuals(fit), by default
+boxplot(cbind(res.P.main, res.D.main), names = c("Pearson", "Deviance"))
+
+# Residuals for interaction model
+res.P.int = residuals(run.mod.int, type="pearson")
+res.D.int = residuals(run.mod.int, type="deviance") #or residuals(fit), by default
+boxplot(cbind(res.P.int, res.D.int), names = c("Pearson", "Deviance"))
 
 boxplot(nb.mod.step$residuals)
+ 
+# Plot Deviance against fitted values 
+# Main
+# main.spline <- smooth.spline(nb.mod.step$fitted.values, res.D.main, spar=0.9)
+# m.spl.dat <- data.frame(main.spline$yin, )
+ggplotly(
+  ggplot() + aes(x = run.mod.main$fitted.values, y = res.D.main) + geom_point() + stat_spline(spar = 0.5, size = 0.8, color = "firebrick") + labs(x = "Fitted Values", y = "Deviance Residuals", title = "Deviances Residuals vs Fitted Values for Model with Interactions")
+)
+
+# Interactions
+ggplotly(
+  ggplot() + aes(x = run.mod.int$fitted.values, y = res.D.int) + geom_point() + stat_spline(spar = 0.8, size = 0.8, color = "firebrick") + labs(x = "Fitted Values", y = "Deviance Residuals", title = "Deviances Residuals vs Fitted Values for Model with Interactions")
+)
+
+# The interaction model is a much better fit where as the main effects
+# We will confirm with Runs test
+library(lawstat)
+
+runs.test(y = res.D.main, plot.it = T)
+
+runs.test(y = res.D.int, plot.it = T)
 
 # Outliers
 png(file="cooks.png")
@@ -224,7 +263,7 @@ png(file="leverage.png")
 plot(final.model, which = 5)
 dev.off()
 
-
+plot(final.model, which = 4)
 # Observing high leverage points
 #xtable(bike.enc[c(65, 668, 725),])
 
@@ -236,6 +275,15 @@ bike.enc.red <- (bike.enc[-c(65, 668, 725),])
 final.model.red <- glm.nb(cnt~ season + yr + holiday + weathersit + temp + hum + windspeed + season:temp + yr:temp + weathersit:hum + weathersit:windspeed, data = bike.enc.red)
 sumFin
 summary(final.model.red)
+
+res.D.int.red = residuals(final.model.red, type="deviance")
+
+# Check fit a final time 
+ggplotly(
+  ggplot() + aes(x = final.model.red$fitted.values, y = res.D.int.red) + geom_point() + stat_spline(size = 0.8, color = "firebrick") + labs(x = "Fitted Values", y = "Deviance Residuals", title = "Deviances Residuals vs Fitted Values for Model with Interactions with Removed Outliers")
+)
+
+runs.test(y = res.D.int.red, plot.it = T)
 ```
 
 ## Test for regression effect (LRT)
