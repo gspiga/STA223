@@ -16,7 +16,9 @@ library(reshape2)
 library(plotly)
 library(MASS)
 library(xtable) # For latex table
+library(ggformula) # For smoothing spline
 ```
+
 ```{r}
 # Loading in the data, we will use day.csv since it includes hour of the day 
 bike <- read.csv("day.csv")
@@ -94,7 +96,8 @@ ggplotly(ggplot(bike, aes(x = cnt, fill = season)) + geom_histogram(
 ) + labs(x = "Count of Registered and Casual Bicycles", y = "Quantity Recorded" , title = "Histogram of Total Users Seperated by Season"))
 
 # Boxplots
-ggplot(bike, aes(x = cnt, y = weekday, fill = yr)) + geom_boxplot() + scale_y_discrete(labels = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")) + labs(x = "Count of Registered and Casual Bicycles", y = "Day of the Week", fill = "Year") + scale_fill_discrete(labels=c("2011", "2012"))
+ggplot(bike, aes(x = cnt, y = weekday, fill = yr)) + geom_boxplot() + scale_y_discrete(labels = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")) + labs(x = "Count of Registered and Casual Bicycles", y = "Day of the Week", fill = "Year", title = "Boxplot of Scores vs Day of the Week Split by Year") + scale_fill_discrete(labels=c("2011", "2012"))
+ggsave("boxplot1.png")
 
 # Check medians for interpretation 
 bike.r %>% group_by(yr, weekday) %>% summarise(med = median(cnt))
@@ -102,9 +105,10 @@ bike.r %>% group_by(yr, weekday) %>% summarise(med = median(cnt))
 ggplot(bike, aes(x = season, y = cnt, fill = season)) + geom_boxplot()+ labs(
     x = "Count of Registered and Casual Bicycles",
     y = "Normalized Temperature in Celsius" ,
-    title = "Normalized Temperature vs. Bikes Rented Colored by Weather Conditions",
+    title = "Normalized Temperature vs. Bikes Rented Colored by Season",
     fill = "Season"
   )
+
 
 # Scatter plots
 ggplotly(
@@ -123,6 +127,7 @@ ggplotly(
     color = "Weather Condition"
   )
 )
+
 
 ggplot(data = bike.r, aes(x = weekday, y = cnt, fill = weekday)) + geom_boxplot()
 
@@ -220,7 +225,6 @@ run.mod.main <- glm.nb(cnt ~ season + yr + holiday + weathersit + temp +
 run.mod.int <- glm.nb(cnt ~ season + yr + holiday + weathersit + temp + hum + windspeed + season:temp + yr:temp + weathersit:hum + weathersit:windspeed, data = bike.shuffle)
 summary(run.mod.int)
 
-library(ggformula)
 ### Residual Analysis
 res.P.main = residuals(run.mod.main, type="pearson")
 res.D.main = residuals(run.mod.main, type="deviance") #or residuals(fit), by default
@@ -238,7 +242,7 @@ boxplot(nb.mod.step$residuals)
 # main.spline <- smooth.spline(nb.mod.step$fitted.values, res.D.main, spar=0.9)
 # m.spl.dat <- data.frame(main.spline$yin, )
 ggplotly(
-  ggplot() + aes(x = run.mod.main$fitted.values, y = res.D.main) + geom_point() + stat_spline(spar = 0.5, size = 0.8, color = "firebrick") + labs(x = "Fitted Values", y = "Deviance Residuals", title = "Deviances Residuals vs Fitted Values for Model with Interactions")
+  ggplot() + aes(x = run.mod.main$fitted.values, y = res.D.main) + geom_point() + stat_spline(spar = 0.8, size = 0.8, color = "firebrick") + labs(x = "Fitted Values", y = "Deviance Residuals", title = "Deviances Residuals vs Fitted Values for Model with Only Main Effects")
 )
 
 # Interactions
@@ -271,8 +275,12 @@ plot(final.model, which = 4)
 bike.enc %>% group_by(yr, mnth) %>% summarise(med = median(cnt), meanHum = mean(hum))
 
 
-bike.enc.red <- (bike.enc[-c(65, 668, 725),])
-final.model.red <- glm.nb(cnt~ season + yr + holiday + weathersit + temp + hum + windspeed + season:temp + yr:temp + weathersit:hum + weathersit:windspeed, data = bike.enc.red)
+bike.enc.red <- (bike.enc[-c(65), ]) # 668, 725),])
+final.model.red <-
+  glm.nb(
+    cnt ~ season + yr + holiday + weathersit + temp + hum + windspeed + season:temp + yr:temp + weathersit:hum + weathersit:windspeed,
+    data = bike.enc.red
+  )
 sumFin
 summary(final.model.red)
 
@@ -284,6 +292,21 @@ ggplotly(
 )
 
 runs.test(y = res.D.int.red, plot.it = T)
+
+
+#Build a table wiht CI for final model with dropped observation
+sumFinRed <- summary(final.model.red)
+
+# Creating 95% CI for coefficients
+coefCI.red <-
+  cbind(
+    sumFinRed$coef[, 1],
+    sumFinRed$coef[, 1] - 1.96 * sumFin$coef[, 2],
+    sumFinRed$coef[, 1] + 1.96 * sumFinRed$coef[, 2]
+  )
+colnames(coefCI.red) <-
+  c("Coefficient", "95% CI Lower", "95% CI Upper")
+xtable(coefCI.red)
 ```
 
 ## Test for regression effect (LRT)
@@ -316,3 +339,7 @@ anova(nb.model, nb.mod.step, test = "Chi")
 
 anova(nb.mod.step,nb.model, test = "Chi")
 ```
+
+$$
+E(Y|X) = \beta_0 + \beta_1X_{season2} + \beta_2X_{season3} + \beta_3X_{season4} + \beta_4X_{yr1} + \beta_5X_{holiday1} + \beta_6X_{weathersit2} \\ + \beta_7X_{temp} + \beta_8X_{hum} + \beta_9X_{windspeed} + \beta_10X_{season2:temp} + \beta_11X_{season3:temp} + \beta_12X_{season4:temp} \\  + \beta_13X_{yr1:temp} + \beta_14X_{weathersit2:hum} + \beta_15X_{weathersit2:windspeed}  
+$$
