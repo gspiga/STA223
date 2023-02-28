@@ -1,0 +1,64 @@
+---
+title: "Homework 6"
+author: "Gianni Spiga"
+date: '2023-02-24'
+output: html_document
+---
+
+# Problem Set 4
+
+## Question 13
+
+```{r}
+library(knitr)
+library(car)
+```
+
+
+```{r, echo = F}
+mela <- read.table("melanoma.txt", header = TRUE)
+B <- 2000
+
+# Confidence Elipseses via Bootstap 
+beta.est <- function(data, ind) {
+  res <- glm(totalincidence ~ ., data = data[ind, ], family = poisson())
+  coef(res)
+}
+boot.res <- boot(mela, beta.est, R=B)
+
+alpha = 0.05
+
+# 95% bootstrap confidence interval for beta_1
+sort(boot.res$t[,2])[round(c((B+1)*alpha/2, (B+1)*(1-alpha/2)))]
+# 95% bootstrap confidence interval for beta_2
+sort(boot.res$t[,3])[round(c((B+1)*alpha/2, (B+1)*(1-alpha/2)))]
+
+# 95% and 99% bootstrap confidence regions for (beta_1, beta_2)
+dataEllipse(
+  boot.res$t[, 2],
+  boot.res$t[, 3],
+  xlab = "year coefficient",
+  ylab = "sunspot coefficient",
+  cex = .3,
+  levels = c(.95, .99)
+)
+```
+```{r}
+
+glm.mela <- glm(totalincidence ~ years + sunspotnumber, data = mela, family = poisson())
+sum.mela <- summary(glm.mela)
+sum.mela
+
+invSigma <- solve(vcov(glm.mela)[2:3,2:3])
+beta <- coef(glm.mela)[2:3]
+
+beta.test <- function(data, ind){
+res <- glm(totalincidence ~ ., data=data[ind,], family=poisson())
+beta.star <- coef(res)[2:3]
+t(beta.star-beta) %*% invSigma %*% (beta.star-beta)
+}
+boot.test <- boot(mela, beta.test, R=B)
+boot.test
+
+(sum(as.vector(boot.test$t) > as.vector(t(beta) %*% invSigma %*% beta)) + 1) / (B + 1)
+```
