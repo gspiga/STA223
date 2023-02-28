@@ -12,6 +12,7 @@ output: html_document
 ```{r}
 library(knitr)
 library(car)
+library(boot)
 ```
 
 
@@ -29,9 +30,9 @@ boot.res <- boot(mela, beta.est, R=B)
 alpha = 0.05
 
 # 95% bootstrap confidence interval for beta_1
-sort(boot.res$t[,2])[round(c((B+1)*alpha/2, (B+1)*(1-alpha/2)))]
+ci.B1 <- sort(boot.res$t[,2])[round(c((B+1)*alpha/2, (B+1)*(1-alpha/2)))]
 # 95% bootstrap confidence interval for beta_2
-sort(boot.res$t[,3])[round(c((B+1)*alpha/2, (B+1)*(1-alpha/2)))]
+ci.B2 <- sort(boot.res$t[,3])[round(c((B+1)*alpha/2, (B+1)*(1-alpha/2)))]
 
 # 95% and 99% bootstrap confidence regions for (beta_1, beta_2)
 dataEllipse(
@@ -42,9 +43,13 @@ dataEllipse(
   cex = .3,
   levels = c(.95, .99)
 )
-```
-```{r}
 
+kable(rbind(ci.B1, ci.B2))
+```
+
+When testing the null hypothesis $H_0: \beta_i =0, \ i=1,2$ we find that the coefficient for year is significant at $\alpha=0.05$ and the coefficient for sunspot is not. Our confidence interval for sunspots (\$\beta_2$) contains zero, which we can see from both the interval and the ellipse. These results line up with our previous ones in Homework 2 when we performed formal tests. 
+
+```{r}
 glm.mela <- glm(totalincidence ~ years + sunspotnumber, data = mela, family = poisson())
 sum.mela <- summary(glm.mela)
 sum.mela
@@ -58,7 +63,53 @@ beta.star <- coef(res)[2:3]
 t(beta.star-beta) %*% invSigma %*% (beta.star-beta)
 }
 boot.test <- boot(mela, beta.test, R=B)
-boot.test
+#boot.test
 
-(sum(as.vector(boot.test$t) > as.vector(t(beta) %*% invSigma %*% beta)) + 1) / (B + 1)
+#(sum(as.vector(boot.test$t) > as.vector(t(beta) %*% invSigma %*% beta)) + 1) / (B + 1)
 ```
+
+When testing the null hypothesis $H_0: \beta_i =0, \ i=1,2$ we find that the coefficient for year is significant at $\alpha=0.05$ and the coefficient for sunspot is not. Our confidence interval for sunspots (\$\beta_2$) contains zero, which we can see from both the interval and the ellipse. These results line up with our previous ones in Homework 2 when we performed formal tests. In testing for the overall regression effect with bootstrap, we get a p-value of 0.0004, matching with the similar conclusion of problem 7 in problem set 1 as well. 
+
+## Problem 14
+
+```{r}
+pima <- read.table("pima-indians-diabetes.dat", sep = ",")
+
+names(pima) <- c("NPreg", "PGC", "DBP", "Tricep", "Serum.Insulin", "BMI", "Pedigree", "Age", "Diabetic")
+# Description of data on page 146
+#pima <- pima[,-c(1, 7)]
+
+# Carry out fit with binomial regression 
+pima.fit <- glm(Diabetic ~ ., data = pima, family = "binomial")
+summary(pima.fit)
+
+
+#Confidence intervals by asymptotic normality
+pima.coef <- summary(pima.fit)$coef
+pima.ci <- cbind(pima.coef[,1] - 1.96*pima.coef[,2], pima.coef[,1] + 1.96*pima.coef[,2])
+
+
+beta.est.bin <- function(data, ind) {
+  res <- glm(Diabetic ~ ., data = data[ind, ], family = binomial())
+  coef(res)
+}
+
+# Confidence intervals via bootstrap
+boot.pima <- boot(pima, beta.est.bin, R = B)
+boot.pima$t
+
+pima.ci.boot <- data.frame(LB = numeric(0), UB = numeric(0))
+for (i in 1:ncol(boot.pima$t)){
+  pima.ci.boot[nrow(pima.ci.boot)+1, ] <- rbind(pima.ci, sort(boot.pima$t[,i])[round(c((B+1)*alpha/2, (B+1)*(1-alpha/2)))])
+}
+kable(pima.ci)
+kable(pima.ci.boot)
+```
+
+Though some of the confidence intervals for the slopes differ above, we can see that they are very similar to each other. The CI's for the standard MLE approzimation is on the left, and the bootstrap intervals are on the right. Regardless of the width of the interval, all of them lead to the same conclusion for rejecting or failing to reject their respective null hypothesis. 
+
+# Problem Set 5
+
+## Question 1
+
+1.) 
