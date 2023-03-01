@@ -1,15 +1,17 @@
 ---
 title: "Homework 6"
 author: "Gianni Spiga"
-date: '2023-02-24'
-output: html_document
+date: "2023-02-24"
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 # Problem Set 4
 
 ## Question 13
 
-```{r}
+```{r, echo = F, message = F}
 library(knitr)
 library(car)
 library(boot)
@@ -47,12 +49,11 @@ dataEllipse(
 kable(rbind(ci.B1, ci.B2))
 ```
 
-When testing the null hypothesis $H_0: \beta_i =0, \ i=1,2$ we find that the coefficient for year is significant at $\alpha=0.05$ and the coefficient for sunspot is not. Our confidence interval for sunspots (\$\beta_2$) contains zero, which we can see from both the interval and the ellipse. These results line up with our previous ones in Homework 2 when we performed formal tests. 
 
-```{r}
+```{r, echo = F}
 glm.mela <- glm(totalincidence ~ years + sunspotnumber, data = mela, family = poisson())
 sum.mela <- summary(glm.mela)
-sum.mela
+#sum.mela
 
 invSigma <- solve(vcov(glm.mela)[2:3,2:3])
 beta <- coef(glm.mela)[2:3]
@@ -68,11 +69,11 @@ boot.test <- boot(mela, beta.test, R=B)
 #(sum(as.vector(boot.test$t) > as.vector(t(beta) %*% invSigma %*% beta)) + 1) / (B + 1)
 ```
 
-When testing the null hypothesis $H_0: \beta_i =0, \ i=1,2$ we find that the coefficient for year is significant at $\alpha=0.05$ and the coefficient for sunspot is not. Our confidence interval for sunspots (\$\beta_2$) contains zero, which we can see from both the interval and the ellipse. These results line up with our previous ones in Homework 2 when we performed formal tests. In testing for the overall regression effect with bootstrap, we get a p-value of 0.0004, matching with the similar conclusion of problem 7 in problem set 1 as well. 
+When testing the null hypothesis $H_0: \beta_i =0, \ i=1,2$ we find that the coefficient for year is significant at $\alpha=0.05$ and the coefficient for sunspot is not. Our confidence interval for sunspots ($\beta_2$) contains zero, which we can see from both the interval and the ellipse. These results line up with our previous ones in Homework 2 when we performed formal tests. In testing for the overall regression effect with bootstrap, we get a p-value of 0.0004, matching with the similar conclusion of problem 7 in problem set 1 as well. 
 
 ## Problem 14
 
-```{r}
+```{r, echo = F, warning = F}
 pima <- read.table("pima-indians-diabetes.dat", sep = ",")
 
 names(pima) <- c("NPreg", "PGC", "DBP", "Tricep", "Serum.Insulin", "BMI", "Pedigree", "Age", "Diabetic")
@@ -81,7 +82,7 @@ names(pima) <- c("NPreg", "PGC", "DBP", "Tricep", "Serum.Insulin", "BMI", "Pedig
 
 # Carry out fit with binomial regression 
 pima.fit <- glm(Diabetic ~ ., data = pima, family = "binomial")
-summary(pima.fit)
+#summary(pima.fit)
 
 
 #Confidence intervals by asymptotic normality
@@ -96,7 +97,7 @@ beta.est.bin <- function(data, ind) {
 
 # Confidence intervals via bootstrap
 boot.pima <- boot(pima, beta.est.bin, R = B)
-boot.pima$t
+#boot.pima$t
 
 pima.ci.boot <- data.frame(LB = numeric(0), UB = numeric(0))
 for (i in 1:ncol(boot.pima$t)){
@@ -148,9 +149,27 @@ H_0: \beta_4 \neq 0 \\
 H_a: \beta_4 = 0
 $$
 However, testing if a value is strictly equal to zero is very challenging to perform. Instead we would need to discuss with the investigator if we could expand the hypothesis into a a small interval centered around zero. This way, we would have a better ability to approximate with the hypothesis. 
+
+### d.) 
+
+```{r, echo = F, message = F}
+library(lattice)
+
+x <- c(-2, -0.5, 0, 0.5, 2)
+# stripplot(x)
+
+x <- data.frame(x,1) ## 1 is your "height"
+{
+plot(x, type = 'o', pch = '|', ylab = '')
+rect(-0.5, 1.2, 0.5,0.8, col = "grey")
+}
+```
+
+Let the grey region be our alternative hypothesis, and all points outside of this region be our null. Our p-value would be the minimum $\alpha$ level needed to include our point in this interval. In this example, the region is from -0.5 to 0.5, but this arbitrary and can be picked by the investigator at any level.
+
 ### e.) 
 
-We could embed a new model with a quadtratic term or a another non-linear term. Doing this, we could compare the models via a likilihood ratio test and return the results to the investigator. 
+We could embed a new model with a quadratic term or a another non-linear term. Doing this, we could compare the models via a likelihood ratio test and return the results to the investigator. 
 
 ### f.) 
 
