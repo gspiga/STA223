@@ -1,0 +1,38 @@
+---
+title: "Project 2 Exploration"
+author: "Gianni Spiga"
+date: '2023-03-02'
+output: html_document
+---
+
+
+```{r}
+load("C:/Users/Gianni/AppData/Local/Temp/Temp2_ICPSR_38090-V1.zip/ICPSR_38090/DS0003/38090-0003-Data.rda")
+
+crime <- da38090.0003[,1:109]
+head(crime)
+head(da38090.0003)
+
+# Get dataframe labels
+library(purrr)
+#labels <- map_chr(1:ncol(da38090.0003), function(x) attr(da38090.0003[[x]], "variable.labels"))
+
+labels <- attr(da38090.0003, "variable.labels")
+
+load("C:/Users/Gianni/AppData/Local/Temp/Temp2_ICPSR_38090-V1.zip/ICPSR_38090/DS0004/38090-0004-Data.rda")
+View(da38090.0004)
+# Column 455 is column which that states whether crime was reported to police or not
+
+# Going to gather Household ID and column of reports, and join on data set 0003
+ID.report <- da38090.0004[,c(3,4, 455)]
+ID.report
+
+# We want an inner join, where matching keys give us household information and whether or not they reported
+
+crime.join <- merge(crime, ID.report, by = c("IDHH", "IDPER"))
+crime.join
+
+
+
+table(crime.join$V4399)
+```
