@@ -5,34 +5,88 @@ date: '2023-03-02'
 output: html_document
 ---
 
+```{r}
+library(purrr) # getting data frame labels
+library(sjlabelled)
+library(Hmisc) # upData()
+library(dplyr)
+```
 
 ```{r}
-load("C:/Users/Gianni/AppData/Local/Temp/Temp2_ICPSR_38090-V1.zip/ICPSR_38090/DS0003/38090-0003-Data.rda")
+# Loading in the data 
+load("./ICPSR_38090/DS0003/38090-0003-Data.rda")
+load("./ICPSR_38090/DS0004/38090-0004-Data.rda")
+```
 
+```{r}
 crime <- da38090.0003[,1:109]
-head(crime)
-head(da38090.0003)
 
-# Get dataframe labels
-library(purrr)
-#labels <- map_chr(1:ncol(da38090.0003), function(x) attr(da38090.0003[[x]], "variable.labels"))
-
+# Get labels for crime dataset
+# This is the only way I have gotten it to work
 labels <- attr(da38090.0003, "variable.labels")
+labels.ls <- c(data.frame(strsplit(labels, split = "'"))[1,1:109])
 
-load("C:/Users/Gianni/AppData/Local/Temp/Temp2_ICPSR_38090-V1.zip/ICPSR_38090/DS0004/38090-0004-Data.rda")
-View(da38090.0004)
+# Make a list of variable names
+#var.labels <- setNames(labels.ls, attr(labels.ls, "names")) # https://stackoverflow.com/questions/7535412/create-a-numeric-vector-with-names-in-one-statement
+#crime <- upData(crime, labels = var.labels)
+crime <- upData(crime, labels = labels.ls)
+View(crime)
+
+
+# Next dataset
+#View(da38090.0004)
 # Column 455 is column which that states whether crime was reported to police or not
 
 # Going to gather Household ID and column of reports, and join on data set 0003
 ID.report <- da38090.0004[,c(3,4, 455)]
 ID.report
 
+labels.4 <- attr(da38090.0004, "variable.labels")
+labels.ls4 <- strsplit(labels.4, split = "'")[c(3,4,455)]
+
+ID.report <- upData(ID.report, labels = labels.ls4)
+
+View(ID.report)
 # We want an inner join, where matching keys give us household information and whether or not they reported
 
 crime.join <- merge(crime, ID.report, by = c("IDHH", "IDPER"))
-crime.join
+View(crime.join)
 
-
-
+# This is our response
 table(crime.join$V4399)
+```
+
+# Data Cleaning 
+
+```{r}
+View(crime.join)
+
+# What values are in "V3001"
+table(crime.join$V3001) # just one value, drop it col # 3
+
+# V3003 is the same as YEARQ, drop V3003, col # 6
+with(crime.join, table(YEARQ))
+
+# Lots of columns are strata numbers, which could be explored later, but for the purpose of this analysis, will not include
+# V3006 Household number, could be interesting, ref codebook, not sure how to interpret yet
+# 2 Age columns, drop the allocated one, they seem to be identical, same with sex (v3018), hispanic origin ("V3024A")
+data.frame(crime.join$V3013, crime.join$V3014)
+# Also drop V3026-27, month and year interview was completed
+
+cols2drop <- c("V3001", "V3002", "V3003", "V3004", "V3005", "V3008", "V3009", "V3010", "V3014", "V3018", "V3024A", "V3026", "V3027")
+
+# Count the NAs in all columns and find what is the proportion of them to the entire data set
+NAprop <- crime.join %>% select(everything()) %>% summarise_all(funs(sum(is.na(.)) / nrow(crime.join)))
+# Find all the columns where more than 50% NA
+NAmore50 <- which(NAprop > 0.5)
+NAprop[NAmore50]
+View(crime.join[NAmore50]) 
+
+crime.red <- dplyr::select(crime.join, -c(NAmore50))
+crime.red <- dplyr::select(crime.red, -c(cols2drop))
+View(crime.red)
+```
+
+```{r}
+
 ```
