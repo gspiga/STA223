@@ -30,7 +30,7 @@ labels.ls <- c(data.frame(strsplit(labels, split = "'"))[1,1:109])
 #var.labels <- setNames(labels.ls, attr(labels.ls, "names")) # https://stackoverflow.com/questions/7535412/create-a-numeric-vector-with-names-in-one-statement
 #crime <- upData(crime, labels = var.labels)
 crime <- upData(crime, labels = labels.ls)
-View(crime)
+#View(crime)
 
 
 # Next dataset
@@ -39,18 +39,18 @@ View(crime)
 
 # Going to gather Household ID and column of reports, and join on data set 0003
 ID.report <- da38090.0004[,c(3,4, 455)]
-ID.report
+#ID.report
 
 labels.4 <- attr(da38090.0004, "variable.labels")
 labels.ls4 <- strsplit(labels.4, split = "'")[c(3,4,455)]
 
 ID.report <- upData(ID.report, labels = labels.ls4)
 
-View(ID.report)
+#View(ID.report)
 # We want an inner join, where matching keys give us household information and whether or not they reported
 
 crime.join <- merge(crime, ID.report, by = c("IDHH", "IDPER"))
-View(crime.join)
+#View(crime.join)
 
 # This is our response
 table(crime.join$V4399)
@@ -59,34 +59,145 @@ table(crime.join$V4399)
 # Data Cleaning 
 
 ```{r}
-View(crime.join)
+#View(crime.join)
 
 # What values are in "V3001"
-table(crime.join$V3001) # just one value, drop it col # 3
+#table(crime.join$V3001) # just one value, drop it col # 3
 
 # V3003 is the same as YEARQ, drop V3003, col # 6
-with(crime.join, table(YEARQ))
+#with(crime.join, table(YEARQ))
 
+# We can drop the ID columns now, since the data is merged
 # Lots of columns are strata numbers, which could be explored later, but for the purpose of this analysis, will not include
 # V3006 Household number, could be interesting, ref codebook, not sure how to interpret yet
 # 2 Age columns, drop the allocated one, they seem to be identical, same with sex (v3018), hispanic origin ("V3024A")
 data.frame(crime.join$V3013, crime.join$V3014)
 # Also drop V3026-27, month and year interview was completed
 
-cols2drop <- c("V3001", "V3002", "V3003", "V3004", "V3005", "V3008", "V3009", "V3010", "V3014", "V3018", "V3024A", "V3026", "V3027")
+cols2drop <- c("IDHH", "IDPER", "V3001", "V3002", "V3003", "V3004", "V3005", "V3008", "V3009", "V3010", "V3014","V3016", "V3018", "V3024A", "V3026", "V3027","V3060", "V3069", "V3082", "WGTPERCY", "PER_TIS", "PERBOUNDED")
 
 # Count the NAs in all columns and find what is the proportion of them to the entire data set
 NAprop <- crime.join %>% select(everything()) %>% summarise_all(funs(sum(is.na(.)) / nrow(crime.join)))
-# Find all the columns where more than 50% NA
-NAmore50 <- which(NAprop > 0.5)
+# Find all the columns where more than 10% NA
+NAmore50 <- which(NAprop > 0.1)
 NAprop[NAmore50]
-View(crime.join[NAmore50]) 
+#View(crime.join[NAmore50]) 
 
 crime.red <- dplyr::select(crime.join, -c(NAmore50))
 crime.red <- dplyr::select(crime.red, -c(cols2drop))
+
+# Now look at rows 
+# how many NA in the reponse
+length(sum(is.na(crime.red$V4399)))
+
+# We drop the 1 
+crime.red <- crime.red %>% filter(!is.na(V4399))
+
+# How many rows are missing more than 10% of data 
+NArows <- which(rowSums(is.na(crime.red)) > round(0.1 *ncol(crime.red))) # 425
+
+# Drop these rows 
+crime.red <- crime.red %>% filter(!row_number() %in% NArows)
+
+#Lets revist our response
+table(crime.red$V4399)
+
+# We will drop rows with "Don't know" or "Residue"
+crime.red <-
+  crime.red %>% filter(
+    V3015 != "(8) Residue" &
+      V3020 != "(98) Residue" &
+      V3024 != "(8) Residue" &
+      V3044 != "(8) Residue" &
+      V3_V4526H3A != "(8) Residue" &
+      V3_V4526H3B != "(8) Residue" &
+      V3_V4526H5 != "(8) Residue" &
+      V3_V4526H4 != "(8) Residue" &
+      V3_V4526H6 != "(8) Residue" &
+      V3_V4526H7 != "(8) Residue" &
+      V3083 != "(8) Residue" &
+      V3084 != "(8) Residue" &
+      V3085 != "(8) Residue" &
+      V3086 != "(8) Residue" &
+      V3087 != "(8) Residue" &
+      V3079 != "(8) Residue" &
+      V3071 != "(8) Residue" &
+      V4399 != "(3) Don't know" & V4399 != "(8) Residue"
+  )
+
+# Any factors with only one level? 
+#sapply(1:ncol(crime.red), function(i) length(table(crime.red[, i])))
+
+#crime.red %>% group_by(ID) %>% summarise(no_rows= length(ID))
+
+crime.temp.fact <- sapply(crime.red, function(i) if(is.factor(i)) factor(i))
+#sapply(crime.temp.fact, levels)
+
+#with(crime.red, table(V3015))
+#crime.red[!rowSums(crime.red) == "(8) Residue"]
 View(crime.red)
+
+#library(gdata)
+#crime.red <- View(gdata::drop.levels(crime.red))
+
+#crime.red <- upData(crime.red, labels = labels.ls)
 ```
+# Model Building
 
 ```{r}
+model1 <- glm(V4399 ~ ., data = crime.red, family = binomial())
+summary(model1)
 
+# One does not converge, V3061(1) Yes : lets check it out 
+table(crime.red$V3061)
+# No obvious sign of why no convergence, we will drop 
+# Lets also reencode Education
+crime.red2 <- select(crime.red,-"V3061")
+# crime.red2 <-
+#   crime.red2 %>% mutate(
+#     V3020 = if_else(
+#       V3020 == "1:Elementary" |
+#         V3020 == "3:Elementary" |
+#         V3020 == "4:Elementary" |
+#         V3020 == "5:Elementary" |
+#         V3020 == "6:Elementary" |
+#         V3020 == "7:Elementary" |
+#         V3020 == "8:Elementary", "Grade 1-8", V3020)
+#     )
+
+library(forcats)
+crime.red2 <-
+  crime.red2 %>% mutate(V3020 = fct_collapse(
+    V3020,
+    Mid.Elem = c(
+      "(01) 1:Elementary",
+      '(02) 2:Elementary',
+      '(03) 3:Elementary',
+      '(04) 4:Elementary',
+      '(05) 5:Elementary',
+      '(06) 6:Elementary',
+      '(07) 7:Elementary',
+      '(08) 8:Elementary'
+    ),
+    HS.no.diploma = c(
+      "(09) 9:High school",
+      "(10) 10:High school",
+      "(11) 11:High school",
+      "(27) 12th grade(no diploma)"
+    )
+    University = c(
+      
+    )
+  ))
+
+View(crime.red2)
+
+model2 <- glm(V4399 ~ ., data = crime.red2, family = binomial())
+summary(model2)
+
+# Education is not signficant regardless, so we will drop it as well as Month of Interview Completed
+crime.red3 <- select(crime.red2,-c("V3025"))
+
+model3 <- glm(V4399 ~ ., data = crime.red3, family = binomial())
+summary(model3)
 ```
