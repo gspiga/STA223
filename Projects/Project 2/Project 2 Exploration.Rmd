@@ -10,6 +10,7 @@ library(purrr) # getting data frame labels
 library(sjlabelled)
 library(Hmisc) # upData()
 library(dplyr)
+library(forcats) #fct_collapse 
 ```
 
 ```{r}
@@ -165,11 +166,13 @@ crime.red2 <- select(crime.red,-"V3061")
 #         V3020 == "8:Elementary", "Grade 1-8", V3020)
 #     )
 
-library(forcats)
+# Recode Education
+table(crime.red2$V3020)
 crime.red2 <-
   crime.red2 %>% mutate(V3020 = fct_collapse(
     V3020,
-    Mid.Elem = c(
+    "Below Associates" = c(
+      "(00) Nev/kindergrtn",
       "(01) 1:Elementary",
       '(02) 2:Elementary',
       '(03) 3:Elementary',
@@ -177,18 +180,51 @@ crime.red2 <-
       '(05) 5:Elementary',
       '(06) 6:Elementary',
       '(07) 7:Elementary',
-      '(08) 8:Elementary'
-    ),
-    HS.no.diploma = c(
+      '(08) 8:Elementary',
       "(09) 9:High school",
       "(10) 10:High school",
       "(11) 11:High school",
-      "(27) 12th grade(no diploma)"
-    )
-    University = c(
-      
+      "(27) 12th grade(no diploma)",
+      "(28) High school grad", 
+      "(40) Some college(no degree)"
+    ),
+    Undergraduate = c(
+      "(41) Associate degree",
+      "(42) Bachelor degree"
+    ),
+    Graduate = c(
+      "(43) Master degree",
+      "(44) Prof school degree",
+      "(45) Doctorate degree"
     )
   ))
+
+# Recode Marital Status
+# Combining Widowed, Divorced, and Seperated would balance
+table(crime.red2$V3015)
+crime.red2 <-
+  crime.red2 %>% mutate(V3015 = fct_collapse(
+    V3015,
+    "Lost Partner" = c(
+      "(2) Widowed",
+      '(3) Divorced',
+      '(4) Separated'
+    )))
+
+# Citizenship
+table(crime.red2$V3083)
+# Let's combine to citizen or not
+crime.red2 <-
+  crime.red2 %>% mutate(V3083 = fct_collapse(
+    V3083,
+    "Yes, Citizen" = c(
+      "(1) Yes, born in the United States",
+      "(2) Yes, born in Puerto Rico, Guam, the U.S. Virgin Islands, or Northern Marianas",
+      "(3) Yes, born abroad of U.S. citizen parent or parents",
+      "(4) Yes, citizen by naturalization"
+    )))
+
+
 
 View(crime.red2)
 
