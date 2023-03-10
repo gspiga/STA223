@@ -75,7 +75,7 @@ table(crime.join$V4399)
 data.frame(crime.join$V3013, crime.join$V3014)
 # Also drop V3026-27, month and year interview was completed
 
-cols2drop <- c("IDHH", "IDPER", "V3001", "V3002", "V3003", "V3004", "V3005", "V3008", "V3009", "V3010", "V3014","V3016", "V3018", "V3024A", "V3026", "V3027","V3060", "V3069", "V3082", "WGTPERCY", "PER_TIS", "PERBOUNDED")
+cols2drop <- c("IDHH", "IDPER", "V3001", "V3002", "V3003", "V3004", "V3005", "V3008", "V3009", "V3010", "V3014","V3016", "V3018", "V3024A", "V3026", "V3027","V3060", "V3069", "V3082", "V3085", "WGTPERCY", "PER_TIS", "PERBOUNDED")
 
 # Count the NAs in all columns and find what is the proportion of them to the entire data set
 NAprop <- crime.join %>% select(everything()) %>% summarise_all(funs(sum(is.na(.)) / nrow(crime.join)))
@@ -102,6 +102,7 @@ crime.red <- crime.red %>% filter(!row_number() %in% NArows)
 
 #Lets revist our response
 table(crime.red$V4399)
+str(crime.red$V4399)
 
 # We will drop rows with "Don't know" or "Residue"
 crime.red <-
@@ -118,7 +119,7 @@ crime.red <-
       V3_V4526H7 != "(8) Residue" &
       V3083 != "(8) Residue" &
       V3084 != "(8) Residue" &
-      V3085 != "(8) Residue" &
+      #V3085 != "(8) Residue" &
       V3086 != "(8) Residue" &
       V3087 != "(8) Residue" &
       V3079 != "(8) Residue" &
@@ -150,24 +151,12 @@ model1 <- glm(V4399 ~ ., data = crime.red, family = binomial())
 summary(model1)
 
 # One does not converge, V3061(1) Yes : lets check it out 
-table(crime.red$V3061)
+#table(crime.red$V3061)
 # No obvious sign of why no convergence, we will drop 
-# Lets also reencode Education
 crime.red2 <- select(crime.red,-"V3061")
-# crime.red2 <-
-#   crime.red2 %>% mutate(
-#     V3020 = if_else(
-#       V3020 == "1:Elementary" |
-#         V3020 == "3:Elementary" |
-#         V3020 == "4:Elementary" |
-#         V3020 == "5:Elementary" |
-#         V3020 == "6:Elementary" |
-#         V3020 == "7:Elementary" |
-#         V3020 == "8:Elementary", "Grade 1-8", V3020)
-#     )
 
 # Recode Education
-table(crime.red2$V3020)
+#table(crime.red2$V3020)
 crime.red2 <-
   crime.red2 %>% mutate(V3020 = fct_collapse(
     V3020,
@@ -201,7 +190,7 @@ crime.red2 <-
 
 # Recode Marital Status
 # Combining Widowed, Divorced, and Seperated would balance
-table(crime.red2$V3015)
+#table(crime.red2$V3015)
 crime.red2 <-
   crime.red2 %>% mutate(V3015 = fct_collapse(
     V3015,
@@ -212,7 +201,7 @@ crime.red2 <-
     )))
 
 # Citizenship
-table(crime.red2$V3083)
+#table(crime.red2$V3083)
 # Let's combine to citizen or not
 crime.red2 <-
   crime.red2 %>% mutate(V3083 = fct_collapse(
@@ -224,16 +213,84 @@ crime.red2 <-
       "(4) Yes, citizen by naturalization"
     )))
 
+# Race 
+#table(crime.red2$V3023A)
+# Reduce race categories
+crime.red2 <-
+  crime.red2 %>% mutate(V3023A = fct_collapse(
+    V3023A,
+    "2 or 3 Races" = c(
+      "(06) White-Black",
+      "(07) White-Amer Ind",
+      "(08) White-Asian",
+      "(09) White-Hawaiian",
+      "(10) Black-Amer Ind",
+      "(11) Black-Asian",
+      "(12) Black-Hawaiian/Pacific Ils",
+      "(13) American Indian-Asian",
+      "(14) Asian-Hawaiian/Pacific Ils",
+      "(15) White-Black-American Ind",
+      "(16) White-Black-Asian",
+      "(17) White-Amer Ind-Asian",
+      "(18) White-Asian-Hawaiian",
+      "(19) 2 or 3 races"
+    )))
+# Drop 4 or more races since only one observation 
+crime.red2 <-
+  crime.red2 %>% filter(
+    V3023A != "(20) 4 or 5 races"
+  )
 
+# Dropping Months since we already have a variable explaining which quarter of the year the interview took place, months is overkill
+#table(crime.red2$YEARQ)
+#table(crime.red$V3025)
+crime.red2 <- select(crime.red2,-"V3025")
+
+# Lets observe current school status
+table(crime.red2$V3079)
+# Combine all schools
+crime.red2 <-
+  crime.red2 %>% mutate(V3079 = fct_collapse(
+    V3079,
+    "Current Student" = c(
+      "(0) Regular school",
+      "(1) College/univ",
+      "(2) Trade school",
+      "(3) Voc school"
+    ))) 
+
+# Active Duty variable 
+table(crime.red2$V3087)
+crime.red2 <-
+  crime.red2 %>% mutate(V3087 = fct_collapse(
+    V3087,
+    "Has Been or Is on Active Duty" = c(
+      "(2) Only on active duty for training in the Reserves or National Guard",
+      "(3) Now on active duty",
+      "(4) On active duty in the past, but not now"
+    )))
+
+# Sexuality
+table(crime.red2$V3084)
+crime.red2 <-
+  crime.red2 %>% mutate(V3084 = fct_collapse(
+    V3084,
+    "Not Straight" = c(
+      "(1) Lesbian or gay",
+      "(3) Bisexual",
+      "(4) Something else"
+    )))
+
+table(crime.red2$V3086)
 
 View(crime.red2)
 
 model2 <- glm(V4399 ~ ., data = crime.red2, family = binomial())
 summary(model2)
 
-# Education is not signficant regardless, so we will drop it as well as Month of Interview Completed
-crime.red3 <- select(crime.red2,-c("V3025"))
 
-model3 <- glm(V4399 ~ ., data = crime.red3, family = binomial())
-summary(model3)
+# Step BIC on Model 
+n = nrow(crime.red2)
+library(MASS)
+stepAIC(model2, trace = F, k = log(n))
 ```

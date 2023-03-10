@@ -1,0 +1,113 @@
+---
+title: "Homework 7"
+author: "Gianni Spiga"
+date: "2023-03-10"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# Question 12 
+
+## a.)
+
+```{r, echo = FALSE, message = F}
+library(knitr)
+library(gam)
+
+pima <- read.table("pima-indians-diabetes.dat", sep = ",")
+
+names(pima) <- c("NPreg", "PGC", "DBP", "Tricep", "Serum.Insulin", "BMI", "Pedigree", "Age", "Diabetic")
+# Description of data on page 146
+pima <- pima[,-c(1, 7)]
+
+# Carry out fit with binomial regression 
+pima.fit <- glm(Diabetic ~ ., data = pima, family = "binomial")
+kable(summary(pima.fit)$coefficients)
+```
+
+We can see from the model that Tricept skin fold thickeness and serum insulin variables are non signifcant in this model. We would only select predictors plasma glucose concentration, diastolic blood pressure,BMI and age for the model.
+
+## b.) 
+
+```{r, echo = F}
+pima.gam <- gam(Diabetic ~ s(PGC , 4) + s(DBP , 4) + s(Tricep , 4) + s(Serum.Insulin , 4) + s((BMI) , 4) + s(Age , 4), data = pima, family = "binomial")
+sum.gam <- summary(pima.gam)
+kable(sum.gam$parametric.anova)
+```
+
+Comparing our GLM fit to our GAM fit, with additive terms of 4th degree for all predictors, we can see the GAM model also finds Serum Insulin as well as Tricep non signficant. However, in this model, Diastolic Blood Pressure is also found to not be signifcant in predicting diabetes. 
+
+## c.) 
+
+Yes, I would replace Diastolic Blood Pressure in the GAM model with a linear function. Let's show how this model would come out. 
+```{r, echo = F}
+pima.gam2 <- gam(Diabetic ~ s(PGC , 4) + DBP + s(Tricep , 4) + s(Serum.Insulin , 4) + s((BMI) , 4) + s(Age , 4), data = pima, family = "binomial")
+sum.gam2 <- summary(pima.gam2)
+kable(sum.gam2$parametric.anova)
+```
+Interestingly, our GPLAM model still finds that diastolic blood pressure is not signifcant in the GAM model, even as a linear effect. The remaining signficant predictors are Plasma Glucose Concentration, BMI, and age. 
+
+# Question 13
+
+```{r, echo = F}
+library(MASS)
+library(boot)
+# Logistic classfier with linear predictor
+#cv.glm(pima, pima.fit, K = 10)$delta
+
+# Logistic classfier with quadtratic predictor
+pima.fit2 <- glm(Diabetic ~ poly(PGC,2) + poly(DBP,2)  + poly(Tricep,2) + poly(Serum.Insulin,2) + poly(BMI,2) + poly(Age,2), data = pima, family = "binomial")
+#cv.glm(pima, pima.fit2, K = 10)$delta
+
+# LDA
+pima.lda.cv <- lda(Diabetic ~ .,pima, CV = TRUE)
+
+pred_cv <- pima.lda.cv$class
+#(table(pred_cv, pima$Diabetic)[1,2] + table(pred_cv, pima$Diabetic)[2,1]) / sum(table(pred_cv, pima$Diabetic))
+
+# QDA 
+pima.qda.cv <- qda(Diabetic ~ .,pima, CV = TRUE)
+
+pred_cvq <- pima.qda.cv$class
+#(table(pred_cvq, pima$Diabetic)[1,2] + table(pred_cvq, pima$Diabetic)[2,1]) / sum(table(pred_cvq, pima$Diabetic))
+```
+
+Out of the four classifiers, the logistic classifier with the quadratic terms had the lowest error rate, at 0.156. A logistic classifier with linear predictors did slightly worse, while LDA and QDA performed 3rd and 4th respectively in error. 
+
+# Question 14 
+
+## a.) 
+
+We would perform a logistic regression on this data set, such that we have GLM and GAM
+$$
+logit(E(Y|X)) = \beta_0 + \beta_{GLUC}X_{GLUC} + \beta_{AGE}X_{AGE} \\ 
+$$
+$$
+logit(E(Y|X)) = \beta_0 + f_{GLUC}(x_{GLUC}) + f_{AGE}(X_{AGE}) \\
+E(f_j(X_j)) = 0, j =1, 2 \\
+$$
+
+## b.) 
+
+GAM overcomes the curse of dimensionality by retaining the one-dimensional MSe convergence rate $n^{-4/5}$, thus not falling subject to slow convergence by other non-parametric techniques.
+
+## c.) 
+
+When presenting the results of GAM, we can show the parametric ANOVA table, including the slopes of predictors. With this, we are able to show which predict from the GAM smoothing, while we can fit non-significant terms from the non-parametric ANOVA as only linear effects.
+
+## d.)
+
+The Generalized Additive Partial Linear model would be the best case, where we can have the GAM predictors for continuous variables but keep linearity in factor variables, in this case Gender. 
+
+## e.) 
+
+In the GLM, we can test for interactions by checking if the coefficient for the three way interaction, call it $\beta_4$, would have slope 0, such that:
+
+$$
+H_0: \beta_4 = 0\\
+H_a: \beta_4 \neq 0
+$$
+We could use a test statistic $z_4 = \frac{\beta_4} {se(\beta_4)}$, which would be  distributed as $N(0,1)$ under the null hypothesis. 
+
+
