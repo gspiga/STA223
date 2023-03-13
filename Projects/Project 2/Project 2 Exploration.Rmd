@@ -5,12 +5,22 @@ date: '2023-03-02'
 output: html_document
 ---
 
-```{r}
+```{r, message = F}
 library(purrr) # getting data frame labels
 library(sjlabelled)
 library(Hmisc) # upData()
 library(dplyr)
 library(forcats) #fct_collapse 
+library(ggplot2)
+library(ggthemes) # theme_fivethirtyeight()
+library(ggformula) #stat_spline
+library(ggpubr)
+library(plotly)
+library(knitr)
+library(xtable)
+library(MASS) # stepAIC()
+library(lawstat) # Runs test 
+library(gam)
 ```
 
 ```{r}
@@ -54,7 +64,7 @@ crime.join <- merge(crime, ID.report, by = c("IDHH", "IDPER"))
 #View(crime.join)
 
 # This is our response
-table(crime.join$V4399)
+#xtable(table(crime.join$V4399))
 ```
 
 # Data Cleaning 
@@ -74,11 +84,11 @@ table(crime.join$V4399)
 # 2 Age columns, drop the allocated one, they seem to be identical, same with sex (v3018), hispanic origin ("V3024A")
 data.frame(crime.join$V3013, crime.join$V3014)
 # Also drop V3026-27, month and year interview was completed
-
-cols2drop <- c("IDHH", "IDPER", "V3001", "V3002", "V3003", "V3004", "V3005", "V3008", "V3009", "V3010", "V3014","V3016", "V3018", "V3024A", "V3026", "V3027","V3060", "V3069", "V3082", "V3085", "WGTPERCY", "PER_TIS", "PERBOUNDED")
+# V3086 is sexual identity and V3017 is Sex, we will use sex 
+cols2drop <- c("IDHH", "IDPER", "V3001", "V3002", "V3003", "V3004", "V3005", "V3008", "V3009", "V3010", "V3014","V3016", "V3018", "V3024A", "V3026", "V3027","V3060", "V3069", "V3082", "V3085", "V3086", "WGTPERCY", "PER_TIS", "PERBOUNDED")
 
 # Count the NAs in all columns and find what is the proportion of them to the entire data set
-NAprop <- crime.join %>% select(everything()) %>% summarise_all(funs(sum(is.na(.)) / nrow(crime.join)))
+NAprop <- crime.join %>% dplyr::select(everything()) %>% summarise_all(funs(sum(is.na(.)) / nrow(crime.join)))
 # Find all the columns where more than 10% NA
 NAmore50 <- which(NAprop > 0.1)
 NAprop[NAmore50]
@@ -88,7 +98,7 @@ crime.red <- dplyr::select(crime.join, -c(NAmore50))
 crime.red <- dplyr::select(crime.red, -c(cols2drop))
 
 # Now look at rows 
-# how many NA in the reponse
+# how many NA in the response
 length(sum(is.na(crime.red$V4399)))
 
 # We drop the 1 
@@ -120,7 +130,7 @@ crime.red <-
       V3083 != "(8) Residue" &
       V3084 != "(8) Residue" &
       #V3085 != "(8) Residue" &
-      V3086 != "(8) Residue" &
+      #V3086 != "(8) Residue" &
       V3087 != "(8) Residue" &
       V3079 != "(8) Residue" &
       V3071 != "(8) Residue" &
@@ -144,19 +154,53 @@ View(crime.red)
 
 #crime.red <- upData(crime.red, labels = labels.ls)
 ```
-# Model Building
+
+# Data Visualization
+
+```{r}
+# Histogram of Age Split of by Whether reported to Police
+ggplotly(
+  ggplot(crime.red, aes(x = V3013, fill = V4399)) + geom_histogram() + scale_fill_manual(values =c("goldenrod", "#2055da"))+ theme_igray() + labs(x = "Age", y = 'Count', title = "Distribution of Age Colored by Whether Reported to Police or Not")
+)
+
+# Weight seperarated by V4399
+ggplotly(ggplot(crime.red, aes(x = V3080, fill = V4399)) + geom_histogram())
+
+
+# Tables
+# police report vs hispanic orgin
+kable(table(crime.red$V4399, crime.red$V3024)[1:2, 1:2])
+
+#ggballoonplot(crime.red, x = "V4399", y = "V3017", size = "V3013", fill = "V3013")
+
+
+# Police report vs Sex
+kable(table(crime.red$V4399, crime.red$V3017)[1:2, 1:2])
+
+# Distribution of Counts for Educational Attainement 
+ggplotly(
+  ggplot(data = crime.red, aes(x = V3020)) + geom_bar(fill = "goldenrod") + theme_igray() + theme(axis.text.x = element_text(
+    angle = 90,
+    vjust = 0.5,
+    hjust = 1,
+  )) + labs(x = "Educational Attainement", y = "Count", title = "Distributiuon of Counts of Educational Attainement Before Re-encoding"))
+```
+
+
+# Model Building and Data Recoding
 
 ```{r}
 model1 <- glm(V4399 ~ ., data = crime.red, family = binomial())
-summary(model1)
+#summary(model1)
 
 # One does not converge, V3061(1) Yes : lets check it out 
 #table(crime.red$V3061)
 # No obvious sign of why no convergence, we will drop 
-crime.red2 <- select(crime.red,-"V3061")
+crime.red2 <- dplyr::select(crime.red,-"V3061")
 
 # Recode Education
 #table(crime.red2$V3020)
+length(unique(crime.red$V3020))
 crime.red2 <-
   crime.red2 %>% mutate(V3020 = fct_collapse(
     V3020,
@@ -188,20 +232,35 @@ crime.red2 <-
     )
   ))
 
+
+ggplotly(
+  ggplot(data = crime.red2, aes(x = V3020)) + geom_bar(fill = "goldenrod")  + theme_igray() + theme(axis.text.x = element_text(
+    angle = 90,
+    vjust = 0.5,
+    hjust = 1
+  )) + labs(x = "Educational Attainement", y = "Count", title = "Distributiuon of Counts of Educational Attainement After Re-encoding")
+) 
+
 # Recode Marital Status
 # Combining Widowed, Divorced, and Seperated would balance
-#table(crime.red2$V3015)
+table(crime.red2$V3015)
 crime.red2 <-
   crime.red2 %>% mutate(V3015 = fct_collapse(
     V3015,
+    "Married" = c(
+      "(1) Married"
+    ),
     "Lost Partner" = c(
       "(2) Widowed",
       '(3) Divorced',
       '(4) Separated'
+    ),
+    "Never Married" = c(
+      "(5) Never married"
     )))
 
 # Citizenship
-#table(crime.red2$V3083)
+table(crime.red2$V3083)
 # Let's combine to citizen or not
 crime.red2 <-
   crime.red2 %>% mutate(V3083 = fct_collapse(
@@ -214,7 +273,8 @@ crime.red2 <-
     )))
 
 # Race 
-#table(crime.red2$V3023A)
+table(crime.red2$V3023A)
+length(unique(crime.red$V3023A))
 # Reduce race categories
 crime.red2 <-
   crime.red2 %>% mutate(V3023A = fct_collapse(
@@ -234,17 +294,23 @@ crime.red2 <-
       "(17) White-Amer Ind-Asian",
       "(18) White-Asian-Hawaiian",
       "(19) 2 or 3 races"
-    )))
+    ),
+    "Asian, Pac.Isl.,\n or Amer.Ind. only" = c(
+      "(04) Asian only",
+      "(05) Hawaiian/Pacific IS only",
+      "(03) Am Ind/AK native only"
+      )))
 # Drop 4 or more races since only one observation 
 crime.red2 <-
   crime.red2 %>% filter(
     V3023A != "(20) 4 or 5 races"
   )
 
+
 # Dropping Months since we already have a variable explaining which quarter of the year the interview took place, months is overkill
 #table(crime.red2$YEARQ)
 #table(crime.red$V3025)
-crime.red2 <- select(crime.red2,-"V3025")
+crime.red2 <- dplyr::select(crime.red2,-"V3025")
 
 # Lets observe current school status
 table(crime.red2$V3079)
@@ -285,12 +351,152 @@ table(crime.red2$V3086)
 
 View(crime.red2)
 
+# Extra Visualization 
+ggplotly(
+  ggplot(data = crime.red2, aes(y = V3023A)) + geom_bar(aes(fill = V3017), color = "white") + theme_igray() + scale_y_discrete(
+    labels = function(x)
+      stringr::str_wrap(x, width = 10)
+  ) + facet_wrap(~ V4399) + fill_palette("jco") + labs(
+    x = "Race",
+    y = "Count",
+    fill = "Sex",
+    title = "Bar Plot of Reported to Police by Race and Sex"
+  )
+)
+
+ggplotly(
+  ggplot(data = crime.red2, aes(x = V3023A)) + geom_bar(aes(fill = V3017), color = "white") + facet_wrap(~ V4399) + fill_palette("jco") + theme(axis.text.x = element_text(
+    angle = 90,
+    vjust = 0.5,
+    hjust = 1
+  )) + labs(
+    x = "Race",
+    y = "Count",
+    fill = "Sex",
+    title = "Bar Plot of Reported to Police by Race and Sex"
+  )
+)
+
+ggplotly(
+  ggplot(data = crime.red2, aes(x = V3081, fill = V3015)) + geom_bar() + theme_igray() + facet_wrap(~ V4399) + fill_palette("jco") + labs(
+    x = "Number of Incidents Reported (In Survey)",
+    y = "Count",
+    fill = "Marital Status",
+    title = "Distribution of Number Incidents versus Reported to Police by Marital Status"
+  )
+)
+
+# Reported Police vs Police Something Else
+table(crime.red2$V4399, crime.red2$V3048)
+
 model2 <- glm(V4399 ~ ., data = crime.red2, family = binomial())
 summary(model2)
 
+length(model2$coefficients)
 
 # Step BIC on Model 
 n = nrow(crime.red2)
-library(MASS)
-stepAIC(model2, trace = F, k = log(n))
+```
+
+
+```{r}
+# Data Visualization after recoding 
+# Police Report vs Education
+kable(table(crime.red2$V4399, crime.red2$V3020)[1:2,c(1,9,10)])
+
+model.step <- stepAIC(model2, trace = F, k = log(n))
+summary(model.step)
+
+model.red.int <-
+  glm(
+    V4399 ~ (
+      V3013 + V3015 + V3017 + V3034 + V3044 + V3048 + V3054 + V3083 + V3077 + V3081 + PERINTVNUM
+    ) ^ 2,
+    data = crime.red2,
+    family = "binomial"
+  )
+summary(model.red.int)
+
+
+# Stepwise regression on interaction model 
+model.step.int <- stepAIC(model.red.int, trace = F, k = log(n))
+summary(model.step.int)
+
+
+stepAIC(model.step.int, trace = T, k = log(n))
+
+#Fix column V3034, V3044
+crime.red2 <-
+  crime.red2 %>% mutate(V3034 = fct_collapse(
+    V3034,
+    "Yes" = c(
+      "(1) Yes"
+    ), "No" = c(
+      "(2) No"
+    )))
+
+crime.red2 <-
+  crime.red2 %>% mutate(V3044 = fct_collapse(
+    V3044,
+    "Yes" = c(
+      "(1) Yes"
+    ), "No" = c(
+      "(2) No"
+    )))
+
+# Build a final int model, removing non significant at $alpha = 0.1$
+model.fin <- glm(V4399 ~ V3013 + V3015 + V3017 + V3048 + V3054 + V3083 + V3077 + PERINTVNUM + V3034:V3044 + V3034:V3048 + V3034:V3081 + V3048:V3081, data= crime.red2, family = "binomial")
+model.fin <- update(model.fin, . ~ . - V3034No:V3044Yes)
+model.fin <- update(model.fin, . ~ .  - V3034Yes:V3044No)
+summary(model.fin)
+
+model.fin <- glm(formula = V4399 ~ V3013 + V3015 + V3017 + V3048 + V3054 + 
+    V3083 + V3077 + PERINTVNUM + V3034:V3044 + V3034:V3048 + 
+    V3034:V3081 + V3048:V3081, family = "binomial", data = crime.red2)
+summary(model.fin)
+
+### Building interactions on full model (terrible idea I know)
+#model.int.bad <- glm(V4399 ~ .^2, data = crime.red2, family = binomial())
+#summary(model.int.bad)
+# Epic fail 
+
+model.step.int
+
+# Experimenting with gam
+model.gam <- gam(V4399 ~ s(V3013,3) + V3015 + V3017 + V3048 + V3054 + V3083 + V3077 + s(PERINTVNUM,3) + V3034:V3044 + V3034:V3048 + V3034:V3081 + V3048:V3081, family = "binomial", data = crime.red2)
+summary(model.gam)
+
+model.gam <- gam(V4399 ~ s(V3013,3) + V3015 + V3017 + V3048 + V3054 + V3083 + V3077 + PERINTVNUM + V3034:V3044 + V3034:V3048 + V3034:V3081 + V3048:V3081, family = "binomial", data = crime.red2)
+summary(model.gam)
+```
+
+
+# Model Diagonostics
+
+```{r}
+# Residuals for interaction model
+res.P.int = residuals(model.step.int, type="pearson")
+res.D.int = residuals(model.step.int, type="deviance") #or residuals(fit), by default
+boxplot(cbind(res.P.int, res.D.int), names = c("Pearson", "Deviance"))
+
+ggplotly(
+  ggplot() + aes(x = model.step.int$fitted.values, y = res.D.int) + geom_point() + stat_spline(spar = 1.2, size = 0.8, color = "firebrick") + labs(x = "Fitted Values", y = "Deviance Residuals", title = "Deviances Residuals vs Fitted Values for Model with Interactions")
+)
+
+runs.test(y = res.D.int, plot.it = T)
+
+# Residuals for interaction model
+res.P.gam = residuals(model.gam, type="pearson")
+res.D.gam = residuals(model.gam, type="deviance") #or residuals(fit), by default
+boxplot(cbind(res.P.gam, res.D.gam), names = c("Pearson", "Deviance"))
+
+ggplotly(
+  ggplot() + aes(x = model.gam$fitted.values, y = res.D.gam) + geom_point() + stat_spline(spar = 1.2, size = 0.8, color = "firebrick") + labs(x = "Fitted Values", y = "Deviance Residuals", title = "Deviances Residuals vs Fitted Values for Model with Interactions")
+)
+
+runs.test(y = res.D.gam, plot.it = T)
+
+# outliers
+plot(model.step.int, which = 4)
+plot(model.step.int, which = 5)
 ```
