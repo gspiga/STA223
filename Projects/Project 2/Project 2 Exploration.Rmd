@@ -49,11 +49,11 @@ crime <- upData(crime, labels = labels.ls)
 # Column 455 is column which that states whether crime was reported to police or not
 
 # Going to gather Household ID and column of reports, and join on data set 0003
-ID.report <- da38090.0004[,c(3,4, 455)]
+ID.report <- da38090.0004[,c(2,3,4, 455)]
 #ID.report
 
 labels.4 <- attr(da38090.0004, "variable.labels")
-labels.ls4 <- strsplit(labels.4, split = "'")[c(3,4,455)]
+labels.ls4 <- strsplit(labels.4, split = "'")[c(2, 3,4,455)]
 
 ID.report <- upData(ID.report, labels = labels.ls4)
 
@@ -61,6 +61,8 @@ ID.report <- upData(ID.report, labels = labels.ls4)
 # We want an inner join, where matching keys give us household information and whether or not they reported
 
 crime.join <- merge(crime, ID.report, by = c("IDHH", "IDPER"))
+
+crime.join.per <- merge(crime, ID.report, by = c("YEARQ", "IDPER"))
 #View(crime.join)
 
 # This is our response
@@ -190,7 +192,7 @@ ggplotly(
 # Model Building and Data Recoding
 
 ```{r}
-model1 <- glm(V4399 ~ ., data = crime.red, family = binomial())
+#model1 <- glm(V4399 ~ ., data = crime.red, family = binomial())
 #summary(model1)
 
 # One does not converge, V3061(1) Yes : lets check it out 
@@ -444,13 +446,29 @@ crime.red2 <-
       "(2) No"
     )))
 
-# Build a final int model, removing non significant at $alpha = 0.1$
-model.fin <- glm(V4399 ~ V3013 + V3015 + V3017 + V3048 + V3054 + V3083 + V3077 + PERINTVNUM + V3034:V3044 + V3034:V3048 + V3034:V3081 + V3048:V3081, data= crime.red2, family = "binomial")
-model.fin <- update(model.fin, . ~ . - V3034No:V3044Yes)
-model.fin <- update(model.fin, . ~ .  - V3034Yes:V3044No)
+# Combine V3034 and V3044
+crime.red2$intTerm <-
+  as.factor(with(crime.red2, ifelse(V3034 == "No" &
+                            V3044 == "No", "No", "Yes")))
+# Relevel for Yes as reference
+crime.red2 <- within(crime.red2, intTerm <- relevel(intTerm, ref = 2))
+data.frame(crime.red2$intTerm, crime.red2$V3034, crime.red2$V3044)
+
+table(crime.red2$`34:44`)
+#which(crime.red2$V3044 == "No" & crime.red2$V3034 == "Yes")
+
+# Build a final int model, now just using the interaction term
+model.fin <-
+  glm(
+    V4399 ~ V3013 + V3015 + V3017 + V3048 + V3054 + V3083 + V3077 + PERINTVNUM + intTerm +V3034:V3048 + V3034:V3081 + V3048:V3081,
+    data = crime.red2,
+    family = "binomial"
+  )
+#model.fin <- update(model.fin, . ~ . - V3034No:V3044Yes)
+#model.fin <- update(model.fin, . ~ .  - V3034Yes:V3044No)
 summary(model.fin)
 
-model.fin <- glm(formula = V4399 ~ V3013 + V3015 + V3017 + V3048 + V3054 + 
+model.fin <- glm(formula = V4399 ~ V3013 + V3015 + V3034 + V3044 + V3017 + V3048 + V3054 + 
     V3083 + V3077 + PERINTVNUM + V3034:V3044 + V3034:V3048 + 
     V3034:V3081 + V3048:V3081, family = "binomial", data = crime.red2)
 summary(model.fin)
@@ -463,11 +481,24 @@ summary(model.fin)
 model.step.int
 
 # Experimenting with gam
-model.gam <- gam(V4399 ~ s(V3013,3) + V3015 + V3017 + V3048 + V3054 + V3083 + V3077 + s(PERINTVNUM,3) + V3034:V3044 + V3034:V3048 + V3034:V3081 + V3048:V3081, family = "binomial", data = crime.red2)
+# model.gam <- gam(V4399 ~ s(V3013,3) + V3015 + V3017 + V3048 + V3054 + V3083 + V3077 + s(PERINTVNUM,3) + V3034:V3044 + V3034:V3048 + V3034:V3081 + V3048:V3081, family = "binomial", data = crime.red2)
+# summary(model.gam)
+
+model.gam <- gam(V4399 ~ s(V3013,3) + V3015 + V3017 + V3034 + V3044+  V3048 + V3054 + V3083 + V3077 + PERINTVNUM + V3034:V3044 + V3034:V3048 + V3034:V3081 + V3048:V3081, family = "binomial", data = crime.red2)
 summary(model.gam)
 
-model.gam <- gam(V4399 ~ s(V3013,3) + V3015 + V3017 + V3048 + V3054 + V3083 + V3077 + PERINTVNUM + V3034:V3044 + V3034:V3048 + V3034:V3081 + V3048:V3081, family = "binomial", data = crime.red2)
-summary(model.gam)
+model.gam$coefficients
+model.gam$
+
+  
+  # F test involves df of parameters as well as residuals, which is why different from asymptotic normality
+# Refer to lab code to visualize the nonlinear code 
+  
+  
+# Questions for OH 
+# 1. V3081 is number of crimes in past household has faced, should it be left as numeric interger or factor?
+# 2. Given so many predictors, to what extent should each one be talked about in report/presentation?
+# 3.   
 ```
 
 
@@ -475,17 +506,17 @@ summary(model.gam)
 
 ```{r}
 # Residuals for interaction model
-res.P.int = residuals(model.step.int, type="pearson")
-res.D.int = residuals(model.step.int, type="deviance") #or residuals(fit), by default
+res.P.int = residuals(model.fin, type="pearson")
+res.D.int = residuals(model.fin, type="deviance") #or residuals(fit), by default
 boxplot(cbind(res.P.int, res.D.int), names = c("Pearson", "Deviance"))
 
 ggplotly(
-  ggplot() + aes(x = model.step.int$fitted.values, y = res.D.int) + geom_point() + stat_spline(spar = 1.2, size = 0.8, color = "firebrick") + labs(x = "Fitted Values", y = "Deviance Residuals", title = "Deviances Residuals vs Fitted Values for Model with Interactions")
+  ggplot() + aes(x = model.fin$fitted.values, y = res.D.int) + geom_point() + stat_spline(spar = 1.1, size = 0.8, color = "firebrick") + labs(x = "Fitted Values", y = "Deviance Residuals", title = "Deviances Residuals vs Fitted Values for Model with Interactions")
 )
 
 runs.test(y = res.D.int, plot.it = T)
 
-# Residuals for interaction model
+# Residuals for GAM model
 res.P.gam = residuals(model.gam, type="pearson")
 res.D.gam = residuals(model.gam, type="deviance") #or residuals(fit), by default
 boxplot(cbind(res.P.gam, res.D.gam), names = c("Pearson", "Deviance"))
@@ -499,4 +530,27 @@ runs.test(y = res.D.gam, plot.it = T)
 # outliers
 plot(model.step.int, which = 4)
 plot(model.step.int, which = 5)
+
+
+# Questions for OH
+# 1. How to deal with redundant interactions in manual building of model, which results in NA?
+# 2. In building a GAM model, how can I go about building confidence intervals for each Beta coefficient # bootstap or find std error of coefficients
+# 3. Assistance in interpreting residual plots, am I oversmoothing the spline? 
+# 4. GLM Z test for Beta tells significance for different variables than GAM F test, which one should be trusted?
+
+
+# Notes 
+# box plot 2x2 table to check for multicollinear
+# Chi square test for independence 
+
+
+
+
+
+
+### Notes for what has to be worked on tonight
+# 1. I have to completely rerun all the analysis, and EDA, with the new data merge, should not be too jealous, including type of crime da38090.0004$V4529 would be really interesting, lots of levels
+# 2. I need to figure out what it means for multiple incidents, if someone has multiple incidents, do they have multiple rows? I will investigate tonight. Otherwise, I will only include those who reported one incident for simplificiation
+# 3.I can look at some other incident columns (cant take too long) from da38090.004 to include in the model
+# 4. In the report, I need to update all the eda, the description of the data, as well as how the data sets are being joined, why they are being joined, and what the seperate datasets mean
 ```
