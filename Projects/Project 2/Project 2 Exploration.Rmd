@@ -643,7 +643,16 @@ $$
 logit(E(Y|X)) = \beta_0 + \beta_1X_{Age} + \beta_2X_{MaritalStatus} + \beta_3X_{OffenderKnown} + \beta_4X_{ReportOther} + \beta_5
 
 $$
+```{r}
+sumFin <- summary(model.fin)
+# Creating 95% CI for coefficients
+coefCI <- cbind(sumFin$coef[,1], sumFin$coef[,1] - 1.96*sumFin$coef[,2], sumFin$coef[,1] + 1.96*sumFin$coef[,2])
+colnames(coefCI) <- c("Coefficient", "95% CI Lower", "95% CI Upper")
+coefCI
+#xtable(coefCI)
 
+
+```
 # Model Diagonostics
 
 ```{r}
