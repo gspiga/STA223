@@ -638,7 +638,11 @@ model.gam$coefficients
 # 2. Given so many predictors, to what extent should each one be talked about in report/presentation?
 # 3.   
 ```
+# Our final model
+$$
+logit(E(Y|X)) = \beta_0 + \beta_1X_{Age} + \beta_2X_{MaritalStatus} + \beta_3X_{OffenderKnown} + \beta_4X_{ReportOther} + \beta_5
 
+$$
 
 # Model Diagonostics
 
@@ -646,7 +650,7 @@ model.gam$coefficients
 # Residuals for interaction model
 res.P.int = residuals(model.fin, type="pearson")
 res.D.int = residuals(model.fin, type="deviance") #or residuals(fit), by default
-boxplot(cbind(res.P.int, res.D.int), names = c("Pearson", "Deviance"))
+#boxplot(cbind(res.P.int, res.D.int), names = c("Pearson", "Deviance"))
 
 ggplotly(
   ggplot() + aes(x = model.fin$fitted.values, y = res.D.int) + geom_point() + stat_spline(spar = 1.1, size = 0.8, color = "firebrick") + labs(x = "Fitted Values", y = "Deviance Residuals", title = "Deviances Residuals vs Fitted Values for Model with Interactions")
@@ -657,7 +661,7 @@ runs.test(y = res.D.int, plot.it = T)
 # Residuals for GAM model
 res.P.gam = residuals(model.gam, type="pearson")
 res.D.gam = residuals(model.gam, type="deviance") #or residuals(fit), by default
-boxplot(cbind(res.P.gam, res.D.gam), names = c("Pearson", "Deviance"))
+#boxplot(cbind(res.P.gam, res.D.gam), names = c("Pearson", "Deviance"))
 
 ggplotly(
   ggplot() + aes(x = model.gam$fitted.values, y = res.D.gam) + geom_point() + stat_spline(spar = 1.1, size = 0.8, color = "firebrick") + labs(x = "Fitted Values", y = "Deviance Residuals", title = "Deviances Residuals vs Fitted Values for GAPLM Model")
