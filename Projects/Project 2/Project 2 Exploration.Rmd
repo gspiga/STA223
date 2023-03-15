@@ -114,15 +114,20 @@ cols2drop <-
     "V3024A",
     "V3026",
     "V3027",
+    "V3048",
+    "V3054",
     "V3060",
     "V3069",
+    "V3080",
     "V3082",
     "V3085",
     "V3086",
+    "V3077",
     "WGTPERCY",
     "PER_TIS",
     "PERBOUNDED",
-    "IDHH.y"
+    "IDHH.y",
+    "PERINTVNUM"
   )
 
 # Count the NAs in all columns and find what is the proportion of them to the entire data set
@@ -181,14 +186,14 @@ crime.red <-
   )
 
 # Any factors with only one level? 
-length(sapply(1:ncol(crime.red), function(i) length(table(crime.red[, i]))) > 3)
+sapply(1:ncol(crime.red), function(i) length(table(crime.red[, i])))
 
 #View(crime.red)
 
 # Getting table for report Appendix of variable descriptions
 labels.red <- c(sapply(crime.red, attr, "label"))
 #var.names <- c(attr(crime.red, "names"))
-#xtable(data.frame(labels.red))
+xtable(data.frame(labels.red))
 
 ```
 
@@ -282,7 +287,7 @@ crime.red2 <-
     )
   ))
 
-
+# IN REPORT
 ggplotly(
   ggplot(data = crime.red2, aes(x = V3020)) + geom_bar(fill = "goldenrod")  + theme_igray() + theme(axis.text.x = element_text(
     angle = 90,
@@ -493,11 +498,20 @@ crime.red2 <- within(crime.red2, V4529 <- relevel(V4529, ref = 4))
 xtable(table(crime.red$V4529))
 xtable(table(crime.red2$V4529))
 
+# Recode number of incidents to binary, 1 or 2+ (max being 10)
+crime.red2$V3081 <- as.factor(crime.red2$V3081)
+crime.red2 <-
+  crime.red2 %>% mutate(V3081 = fct_collapse(
+    V3081,
+    "2+" = c("2", "3", "4","5", "6", "7", "8", "9", "10")
+  ))
+
+
 # type of crime and whether it was reported to the police AFTER REENCODING
 ### IN REPORT
 ggplotly(
   ggplot(data = crime.red2, aes(x = V4529, fill = V4399)) + geom_bar() + theme_igray() + theme(axis.text.x = element_text(
-    angle = 90,
+    angle = 25,
     vjust = 0.5,
     hjust = 1,
   )) + fill_palette("jco") + labs(x = "Type of Crime (Re-encoded)", y = "Count", fill = "Reported to Police", title = "Distribution of Types of Crimes Colored by if they were Reported to Police")
@@ -528,7 +542,7 @@ ggplotly(
 ) %>% layout(boxmode = "group") #facet_wrap(~V4399, ncol = 2) / +facet_wrap(~V3017, ncol = 2)
 
 # Reported Police vs Police Something Else
-table(crime.red2$V4399, crime.red2$V3048)
+#table(crime.red2$V4399, crime.red2$V3048)
 
 
 model2 <- glm(V4399 ~ ., data = crime.red2, family = binomial())
@@ -553,18 +567,17 @@ summary(model.step)
 crime.red3 <- dplyr::select(crime.red2, all_of(c(attr(model.step$terms, "term.labels"), "V4399")))
 
 # Recode Counts as categorical
-crime.red3$V3081 <- as.factor(crime.red3$V3081)
-crime.red3 <-
-  crime.red3 %>% mutate(V3081 = fct_collapse(
-    V3081,
-    "2-4" = c("2", "3", "4"),
-    "5+" = c("5", "6", "7", "8", "9", "10")
-  ))
-table(crime.red3$V3081)
+# crime.red3$V3081 <- as.factor(crime.red3$V3081)
+# crime.red3 <-
+#   crime.red3 %>% mutate(V3081 = fct_collapse(
+#     V3081,
+#     "2+" = c("2", "3", "4","5", "6", "7", "8", "9", "10")
+#   ))
+#table(crime.red3$V3081)
 
 model.red.int <-
   glm(
-    V4399 ~ .^2 - V3054:V4529,
+    V4399 ~ .^2,
     data = crime.red3,
     family = "binomial"
   )
@@ -573,6 +586,26 @@ summary(model.red.int)
 # Stepwise regression on interaction model 
 model.step.int <- stepAIC(model.red.int, trace = F, k = log(n))
 summary(model.step.int)
+
+# Experimenting with gam
+model.gam2<-
+  gam(
+    V4399 ~ s(V3013, 2) + V3015 + V3042 + V3044 + V3081 + V4529,
+    family = "binomial",
+    data = crime.red2
+  )
+summary(model.gam2)
+
+# Cubic Spline
+model.gam3<-
+  gam(
+    V4399 ~ s(V3013, 3) + V3015 + V3042 + V3044 + V3081 + V4529,
+    family = "binomial",
+    data = crime.red2
+  )
+summary(model.gam3)
+
+plot(crime.red2$V3013, model.gam$smooth)
 
 # #Fix column V3034, V3044
 # crime.red2 <-
@@ -625,24 +658,41 @@ crime.red3 <-
       "Married",
       "Lost Partner"
     )))
-
+# Combine Robbery/Burglary W Theft
+crime.red3 <-
+  crime.red3 %>% mutate(V4529 = fct_collapse(
+    V4529,
+    "Theft/Rob./Burg" = c(
+      "Theft",
+      "Robbery/Burglary"
+    )
+  ))
 
 # Build a final int model, now just using the interaction term for V3081
 model.fin <-
-  glm(V4399 ~ 
-    V3013 + V3015 + V3042 + V3044 + V3048 + 
-    V3054 + V3077 + V3081 + PERINTVNUM + V4529 + V3042:V3081,
-    data = crime.red3,
-    family = "binomial"
-  ) # Model excludes V3034 and the interaction term between 34 and 44 is now a new variable encoded, int term between 34 and 48 also encoded
-#model.fin <- update(model.fin, . ~ . - V3034No:V3044Yes)
-#model.fin <- update(model.fin, . ~ .  - V3034Yes:V3044No)
+  glm(V4399 ~
+        V3013 + V3015 + V3042 + V3044 + V3081 + V4529,
+      data = crime.red3,
+      family = "binomial") # Model excludes V3034 and the interaction term between 34 and 44 is now a new variable encoded, int term between 34 and 48 also encoded
 summary(model.fin)
 
 # Experimenting with gam
-model.gam <- gam(V4399 ~ s(V3013,3) + V3015 + V3042 + V3044 + V3048 + 
-    V3054 + V3077 + V3081 + PERINTVNUM + V4529 + V3042:V3081, family = "binomial", data = crime.red2)
-summary(model.gam)
+model.gam2<-
+  gam(
+    V4399 ~ s(V3013, 2) + V3015 + V3042 + V3044 + V3081 + V4529,
+    family = "binomial",
+    data = crime.red2
+  )
+summary(model.gam2)
+
+# Cubic Spline
+model.gam3<-
+  gam(
+    V4399 ~ s(V3013, 3) + V3015 + V3042 + V3044 + V3081 + V4529,
+    family = "binomial",
+    data = crime.red2
+  )
+summary(model.gam3)
 
 plot(crime.red2$V3013, model.gam$smooth)
 
@@ -665,10 +715,12 @@ model.gam$coefficients
 # 1. V3081 is number of crimes in past household has faced, should it be left as numeric interger or factor?
 # 2. Given so many predictors, to what extent should each one be talked about in report/presentation?
 # 3.   
+
+
 ```
 # Our final model
 $$
-logit(E(Y|X)) = \beta_0 + \beta_1X_{Age} + \beta_2X_{MaritalStatus} + \beta_3X_{OffenderKnown} + \beta_4X_{ReportOther} + \beta_5
+logit(E(Y_{Report}|X)) = \beta_0 + \beta_1X_{Age} + \beta_2X_{MaritalStatus} +\beta_3X_{OthAtk} +  \beta_4X_{AtkerKnown} + \beta_4X_{NumOfInc} + \beta_5X_{TOC}
 $$
 ```{r}
 sumFin <- summary(model.fin)
@@ -676,7 +728,7 @@ sumFin <- summary(model.fin)
 coefCI <- cbind(sumFin$coef[,1], sumFin$coef[,1] - 1.96*sumFin$coef[,2], sumFin$coef[,1] + 1.96*sumFin$coef[,2])
 colnames(coefCI) <- c("Coefficient", "95% CI Lower", "95% CI Upper")
 coefCI
-#xtable(coefCI)
+xtable(coefCI)
 
 
 ```
@@ -689,27 +741,46 @@ res.D.int = residuals(model.fin, type="deviance") #or residuals(fit), by default
 #boxplot(cbind(res.P.int, res.D.int), names = c("Pearson", "Deviance"))
 
 ggplotly(
-  ggplot() + aes(x = model.fin$fitted.values, y = res.D.int) + geom_point() + stat_spline(spar = 1.1, size = 0.8, color = "firebrick") + labs(x = "Fitted Values", y = "Deviance Residuals", title = "Deviances Residuals vs Fitted Values for Model with Interactions")
+  ggplot() + aes(x = model.fin$fitted.values, y = res.D.int) + geom_point() + theme_igray() + stat_spline(
+    spar = 1,
+    size = 0.8,
+    color = "#cd534cff"
+  ) + labs(x = "Fitted Values", y = "Deviance Residuals", title = "Deviances Residuals vs. Fitted Values for the Final Model")
 )
 
 runs.test(y = res.D.int, plot.it = T)
 
 # Residuals for GAM model
-res.P.gam = residuals(model.gam, type="pearson")
-res.D.gam = residuals(model.gam, type="deviance") #or residuals(fit), by default
-#boxplot(cbind(res.P.gam, res.D.gam), names = c("Pearson", "Deviance"))
+# res.P.gam = residuals(model.gam, type="pearson")
+# res.D.gam = residuals(model.gam, type="deviance") #or residuals(fit), by default
+# #boxplot(cbind(res.P.gam, res.D.gam), names = c("Pearson", "Deviance"))
+# 
+# ggplotly(
+#   ggplot() + aes(x = model.gam$fitted.values, y = res.D.gam) + geom_point() + stat_spline(spar = 1.1, size = 0.8, color = "firebrick") + labs(x = "Fitted Values", y = "Deviance Residuals", title = "Deviances Residuals vs Fitted Values for GAPLM Model")
+# )
 
-ggplotly(
-  ggplot() + aes(x = model.gam$fitted.values, y = res.D.gam) + geom_point() + stat_spline(spar = 1.1, size = 0.8, color = "firebrick") + labs(x = "Fitted Values", y = "Deviance Residuals", title = "Deviances Residuals vs Fitted Values for GAPLM Model")
-)
-
-runs.test(y = res.D.gam, plot.it = T)
+#runs.test(y = res.D.gam, plot.it = T)
 
 # outliers
 plot(model.fin, which = 4) # Observations with the largest Cook's distance are 2778, 6064, and 1988
 plot(model.fin, which = 5)
 
-crime.red2[c(2993, 3839,4904),]
+
+# Outliers - highlight all three lines to save image
+png(file="cooksCrime.png")
+plot(model.fin, which = 4)
+while (!is.null(dev.list()))  dev.off()
+
+png(file="leverageCrime.png")
+plot(model.fin, which = 5)
+dev.off()
+
+# Older people who were all raped/SA and all 3 reported the crime.
+crime.red3[c(262, 2286,3317),]
+
+with(crime.red3, table(V3015, V4529))
+summary(crime.red3$V3013[crime.red3$V3015 == "Never Married"])
+with(crime.red3, table(V3015, V4529))
 
 # Questions for OH
 # 1. How to deal with redundant interactions in manual building of model, which results in NA?
