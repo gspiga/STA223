@@ -71,7 +71,7 @@ crime.join.per <- merge(crime, ID.report, by = c("YEARQ", "IDPER"))
 #xtable(table(crime.join.per$V4399))
 ```
 
-# Data Cleaning 
+# Data Cleaning
 
 ```{r}
 #View(crime.join)
@@ -240,9 +240,8 @@ ggplotly(
   )) + labs(x = "Educational Attainement", y = "Count", title = "Distributiuon of Counts of Educational Attainement Before Re-encoding"))
 ```
 
-
 # Model Building and Data Recoding
- 
+
 ```{r}
 model1 <- glm(V4399 ~ ., data = crime.red, family = binomial())
 summary(model1)
@@ -554,7 +553,6 @@ length(model2$coefficients)
 n = nrow(crime.red2)
 ```
 
-
 ```{r}
 # Data Visualization after recoding 
 # Police Report vs Education
@@ -718,10 +716,13 @@ model.gam$coefficients
 
 
 ```
+
 # Our final model
+
 $$
 logit(E(Y_{Report}|X)) = \beta_0 + \beta_1X_{Age} + \beta_2X_{MaritalStatus} +\beta_3X_{OthAtk} +  \beta_4X_{AtkerKnown} + \beta_4X_{NumOfInc} + \beta_5X_{TOC}
 $$
+
 ```{r}
 sumFin <- summary(model.fin)
 # Creating 95% CI for coefficients
@@ -732,6 +733,7 @@ xtable(coefCI)
 
 
 ```
+
 # Model Diagonostics
 
 ```{r}
